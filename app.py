@@ -5,6 +5,7 @@ import sqlite3
 app = Flask(__name__)
 DATABASE = 'bookings.db'
 
+# Initialize the SQLite database
 def init_db():
     conn = sqlite3.connect(DATABASE)
     c = conn.cursor()
@@ -24,8 +25,8 @@ def init_db():
     conn.commit()
     conn.close()
 
-@app.before_first_request
-def setup():
+# Create tables at startup
+with app.app_context():
     init_db()
 
 @app.route('/', methods=['GET', 'POST'])
