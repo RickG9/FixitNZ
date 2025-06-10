@@ -3,34 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>form</title>
+    <title>Repair Form</title>
 </head>
 <body>
     {% extends "base.html" %}
+
 {% block content %}
 <form method="post" action="/">
   <div class="mb-3">
     <label for="name" class="form-label">Name</label>
     <input type="text" class="form-control" id="name" name="name" required>
   </div>
+
   <div class="mb-3">
     <label for="email" class="form-label">Email</label>
     <input type="email" class="form-control" id="email" name="email" required>
   </div>
+
   <div class="mb-3">
-    <label for="phone" class="form-label">Phone</label>
+    <label for="phone" class="form-label">Phone - Optional</label>
     <input type="text" class="form-control" id="phone" name="phone">
   </div>
+
   <div class="mb-3">
-    <label for="device" class="form-label">Device</label>
-    <input type="text" class="form-control" id="device" name="device" required>
+    <label for="device_brand" class="form-label">Device Brand</label>
+    <select class="form-select" id="device_brand" name="device_brand" required>
+      <option value="" disabled selected>Select a brand</option>
+      <option value="iPhone">iPhone</option>
+      <option value="Android">Android</option>
+      <option value="Windows Laptop">Windows Laptop</option>
+      <option value="MacBook">MacBook</option>
+      <option value="Other">Other</option>
+    </select>
   </div>
+
+  <!-- iPhone Model Dropdown -->
+  <div class="mb-3" id="iphone_model_div" style="display:none;">
+    <label for="iphone_model" class="form-label">iPhone Model</label>
+    <select class="form-select" id="iphone_model" name="iphone_model">
+      <option value="" disabled selected>Select iPhone model</option>
+      <option>iPhone 6s</option>
+      <option>iPhone 6s Plus</option>
+      <option>iPhone SE (1st generation)</option>
+      <option>iPhone 7</option>
+      <option>iPhone 7 Plus</option>
+      <option>iPhone 8</option>
+      <option>iPhone 8 Plus</option>
+      <option>iPhone X</option>
+      <option>iPhone XR</option>
+      <option>iPhone XS</option>
+      <option>iPhone XS Max</option>
+      <option>iPhone 11</option>
+      <option>iPhone 11 Pro</option>
+      <option>iPhone 11 Pro Max</option>
+      <option>iPhone SE (2nd generation)</option>
+      <option>iPhone 12</option>
+      <option>iPhone 12 mini</option>
+      <option>iPhone 12 Pro</option>
+      <option>iPhone 12 Pro Max</option>
+      <option>iPhone 13</option>
+      <option>iPhone 13 mini</option>
+      <option>iPhone 13 Pro</option>
+      <option>iPhone 13 Pro Max</option>
+      <option>iPhone SE (3rd generation)</option>
+      <option>iPhone 14</option>
+      <option>iPhone 14 Plus</option>
+      <option>iPhone 14 Pro</option>
+      <option>iPhone 14 Pro Max</option>
+      <option>iPhone 15</option>
+      <option>iPhone 15 Plus</option>
+      <option>iPhone 15 Pro</option>
+      <option>iPhone 15 Pro Max</option>
+      <option>iPhone 16e</option>
+      <option>iPhone 16</option>
+      <option>iPhone 16 Plus</option>
+      <option>iPhone 16 Pro</option>
+      <option>iPhone 16 Pro Max</option>
+    </select>
+  </div>
+
+  <!-- Android Brand Dropdown -->
+  <div class="mb-3" id="android_brand_div" style="display:none;">
+    <label for="android_brand" class="form-label">Android Brand</label>
+    <select class="form-select" id="android_brand" name="android_brand">
+      <option value="" disabled selected>Select Android brand</option>
+      <option>Samsung</option>
+      <option>Google</option>
+      <option>Xiaomi</option>
+      <option>OPPO</option>
+      <option>Vivo</option>
+      <option>Other</option>
+    </select>
+  </div>
+
+  <!-- Device Description -->
+  <div class="mb-3" id="device_desc_div" style="display:none;">
+    <label for="device" class="form-label">Device Model Number/Serial Number</label>
+    <input type="text" class="form-control" id="device" name="device">
+    <div class="form-text" id="device_hint"></div>
+  </div>
+
   <div class="mb-3">
-    <label for="issue" class="form-label">Issue Description</label>
+    <label for="issue" class="form-label">Issue Description (i.e. Broken Screen, Back Glass, Water Damage, Battery, etc)</label>
     <textarea class="form-control" id="issue" name="issue" rows="3"></textarea>
   </div>
+
   <button type="submit" class="btn btn-primary">Book Inspection</button>
 </form>
+
+<script>
+  const brand = document.getElementById('device_brand');
+  const iphoneDiv = document.getElementById('iphone_model_div');
+  const androidDiv = document.getElementById('android_brand_div');
+  const descDiv = document.getElementById('device_desc_div');
+  const hint = document.getElementById('device_hint');
+
+  brand.addEventListener('change', () => {
+    const val = brand.value;
+    // Toggle iPhone and Android selects
+    iphoneDiv.style.display = (val === 'iPhone') ? 'block' : 'none';
+    androidDiv.style.display = (val === 'Android') ? 'block' : 'none';
+
+    // Show description for Windows, MacBook, Android
+    if (val === 'Windows Laptop') {
+      descDiv.style.display = 'block';
+      hint.textContent = 'Check the bottom of your laptop for the model name or number.';
+    } else if (val === 'MacBook') {
+      descDiv.style.display = 'block';
+      hint.textContent = 'Click the Apple logo  at top-left and select About This Mac for model info.';
+    } else if (val === 'Android') {
+      descDiv.style.display = 'block';
+      hint.textContent = 'Open Settings → About phone to find your model.';
+      } else if (val === 'iPhone') {
+      descDiv.style.display = 'block';
+      hint.textContent = 'Open Settings → General → About to find your model.';
+    } else {
+     descDiv.style.display = 'block';
+      hint.textContent = 'Open Settings → About device to find your model.';
+    }
+  });
+</script>
 {% endblock %}
 </body>
 </html>
