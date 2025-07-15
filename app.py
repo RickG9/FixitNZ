@@ -50,5 +50,9 @@ def book_inspection():
 def booking_success():
     return render_template('booking_success.html')
 
+@app.route('/admin')
+def admin_view():
+    return render_template('admin_view.html')
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True) 
