@@ -38,7 +38,6 @@ def book_inspection():
             'issue': issue,
             'booking_time': booking_time
         }
-
         # Save booking details to the text file.
         save_booking(booking_data)
         return redirect(url_for('booking_success'))
@@ -52,7 +51,7 @@ def booking_success():
 
 @app.route('/admin')
 def admin_view():
-    return render_template('admin_view.html')
+    return render_template('admin_form.html')
 
 if __name__ == '__main__':
     app.run(debug=True) 
