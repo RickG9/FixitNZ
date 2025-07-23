@@ -4,10 +4,28 @@ import sqlite3
 import csv
 import io
 import os
+import secrets
+import hashlib
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'  # Change this to a secure random key
 DATABASE = 'bookings.db'
+
+# Admin credentials and session management
+ADMIN_USERNAME = 'admin'
+ADMIN_PASSWORD = 'admin'
+ADMIN_SESSIONS = {}  # Store active admin sessions
+
+def generate_session_token():
+    """Generate a secure session token."""
+    return secrets.token_urlsafe(32)
+
+def validate_admin_session():
+    """Validate admin session token."""
+    token = session.get('admin_token')
+    if not token or token not in ADMIN_SESSIONS:
+        return False
+    return True
 
 def init_db():
     """Initialize the database with the bookings table."""
@@ -68,6 +86,12 @@ def book_inspection():
         repair = request.form.get('repair', '')
         issue = request.form.get('issue', '')
         booking_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        
+        # Check if terms and conditions are accepted
+        terms_accepted = request.form.get('terms_accepted')
+        if not terms_accepted:
+            flash('You must accept the Terms and Conditions to proceed.', 'error')
+            return render_template('booking_form.html')
 
         booking_data = {
             'name': name,
@@ -96,8 +120,17 @@ def admin_view():
         password = request.form.get('admin_password')
         
         # Check if credentials are correct
-        if username == 'admin' and password == 'admin':
+        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+            # Generate a secure session token
+            token = generate_session_token()
+            session['admin_token'] = token
             session['admin_logged_in'] = True
+            ADMIN_SESSIONS[token] = {
+                'username': username,
+                'login_time': datetime.now().isoformat(),
+                'ip_address': request.remote_addr
+            }
+            flash('Login successful!', 'success')
             return redirect(url_for('admin_dashboard'))
         else:
             flash('Invalid username or password', 'error')
@@ -106,8 +139,8 @@ def admin_view():
 
 @app.route('/admin/dashboard')
 def admin_dashboard():
-    # Check if admin is logged in
-    if not session.get('admin_logged_in'):
+    # Check if admin is logged in with valid session
+    if not validate_admin_session():
         flash('Please log in first', 'error')
         return redirect(url_for('admin_view'))
     
@@ -115,8 +148,10 @@ def admin_dashboard():
 
 @app.route('/admin/download_csv')
 def download_csv():
-    # Check if admin is logged in
-    if not session.get('admin_logged_in'):
+    # Check if admin is logged in with valid session
+    if not validate_admin_session():
+        flash('Please log in first', 'error')
+        return redirect(url_for('admin_view'))
         flash('Please log in first', 'error')
         return redirect(url_for('admin_view'))
     
@@ -146,9 +181,19 @@ def download_csv():
 
 @app.route('/admin/logout')
 def admin_logout():
+    # Remove session token from active sessions
+    token = session.get('admin_token')
+    if token and token in ADMIN_SESSIONS:
+        del ADMIN_SESSIONS[token]
+    
     session.pop('admin_logged_in', None)
+    session.pop('admin_token', None)
     flash('Logged out successfully', 'success')
     return redirect(url_for('admin_view'))
+
+@app.route('/terms')
+def terms_and_conditions():
+    return render_template('terms.html')
 
 if __name__ == '__main__':
     init_db()  # Initialize database on startup

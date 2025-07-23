@@ -2,74 +2,80 @@
 {% block content %}
 <div class="booking-container">
     <div class="booking-header">
-        <h1 class="booking-title">📱 Device Repair Booking</h1>
+        <h1 class="booking-title">Device Repair Booking</h1>
         <p class="booking-subtitle">Get your device fixed by our expert technicians</p>
     </div>
 
     <form method="post" action="/" class="booking-form">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }}" style="background: rgba(239, 68, 68, 0.1); color: #dc2626; border-left: 4px solid #dc2626; padding: 15px; border-radius: 12px; margin-bottom: 25px;">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        
         <!-- Personal Information Section -->
         <div class="form-section">
-            <h3 class="section-title">👤 Personal Information</h3>
+            <h3 class="section-title">Personal Information</h3>
             <div class="form-row">
                 <div class="form-group">
                     <label for="name" class="form-label">
-                        <i class="icon">👤</i>
                         Full Name *
                     </label>
                     <input type="text" class="form-input" id="name" name="name" 
-                           placeholder="Full name" required>
+                           placeholder="Enter your full name" required>
                 </div>
                 <div class="form-group">
                     <label for="email" class="form-label">
-                        <i class="icon">📧</i>
                         Email Address *
                     </label>
                     <input type="email" class="form-input" id="email" name="email" 
-                           placeholder="example@example.com" required>
+                           placeholder="your.email@example.com" required>
                 </div>
             </div>
             <div class="form-group">
                 <label for="phone" class="form-label">
-                    <i class="icon">📞</i>
                     Phone Number (Optional)
                 </label>
                 <input type="tel" class="form-input" id="phone" name="phone" 
-                       placeholder="+64 (020) 123-4567">
+                       placeholder="+1 (555) 123-4567">
             </div>
         </div>
 
         <!-- Device Information Section -->
         <div class="form-section">
-            <h3 class="section-title">🔧 Device & Repair Details</h3>
+            <h3 class="section-title">Device & Repair Details</h3>
             <div class="form-row">
                 <div class="form-group">
                     <label for="device" class="form-label">
-                        <i class="icon">📱</i>
                         Device Type *
                     </label>
                     <select name="device" id="device" class="form-select" required>
                         <option value="" disabled selected>Select your device</option>
-                        <option value="iphone">📱 iPhone</option>
-                        <option value="ipad">📲 iPad</option>
-                        <option value="mcb">💻 MacBook</option>
-                        <option value="win">🖥️ Windows Computer</option>
-                        <option value="other">🔍 General Diagnostic</option>
+                        <option value="iphone">iPhone</option>
+                        <option value="ipad">iPad</option>
+                        <option value="mcb">MacBook</option>
+                        <option value="win">Windows Computer</option>
+                        <option value="other">General Diagnostic</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label for="repair" class="form-label">
-                        <i class="icon">🔨</i>
                         Repair Type
                     </label>
                     <select name="repair" id="repair" class="form-select">
                         <option value="" disabled selected>What needs fixing?</option>
-                        <option value="screen">📺 Screen Replacement</option>
-                        <option value="battery">🔋 Battery Replacement</option>
-                        <option value="chargingport">⚡ Charging Port</option>
-                        <option value="camera">📸 Camera Issues</option>
-                        <option value="water">💧 Water Damage</option>
-                        <option value="software">⚙️ Software Issues</option>
-                        <option value="otherrepair">🔧 Other Hardware Issue</option>
+                        <option value="screen">Screen Replacement</option>
+                        <option value="battery">Battery Replacement</option>
+                        <option value="chargingport">Charging Port</option>
+                        <option value="camera">Camera Issues</option>
+                        <option value="water">Water Damage</option>
+                        <option value="software">Software Issues</option>
+                        <option value="otherrepair">Other Hardware Issue</option>
                     </select>
                 </div>
             </div>
@@ -77,10 +83,9 @@
 
         <!-- Issue Description Section -->
         <div class="form-section">
-            <h3 class="section-title">📝 Issue Description</h3>
+            <h3 class="section-title">Issue Description</h3>
             <div class="form-group">
                 <label for="issue" class="form-label">
-                    <i class="icon">💬</i>
                     Describe the problem
                 </label>
                 <textarea class="form-textarea" id="issue" name="issue" rows="4" 
@@ -88,14 +93,38 @@
             </div>
         </div>
 
+        <!-- Terms and Conditions Section -->
+        <div class="form-section">
+            <h3 class="section-title">Terms and Conditions</h3>
+            <div class="form-group">
+                <div class="terms-container">
+                    <div class="terms-box">
+                        <h4 style="color: #667eea; margin-bottom: 15px;">Data Usage Agreement</h4>
+                        <p style="color: #666; margin-bottom: 15px;">
+                            By proceeding with this booking, you consent to our collection and administrative use of your provided information for repair service delivery. Your data will be securely stored and accessible only to authorized personnel.
+                        </p>
+                        <p style="color: #666; margin-bottom: 15px;">
+                            <strong>We collect your contact and device information, store it securely, and use it exclusively for service delivery. Only authorized administrators can access your data.</strong>
+                        </p>
+                    </div>
+                    <div class="checkbox-container">
+                        <input type="checkbox" id="terms_accepted" name="terms_accepted" required class="terms-checkbox">
+                        <label for="terms_accepted" class="checkbox-label">
+                            <span class="checkmark"></span>
+                            I have read and agree to the <a href="/terms" target="_blank" style="color: #667eea;">Terms and Conditions</a> *
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Submit Section -->
         <div class="form-submit">
             <button type="submit" class="submit-btn">
-                <span class="btn-icon">🚀</span>
                 Book My Repair
             </button>
             <p class="submit-note">
-                ✅ We'll review your request and contact you within 24 hours
+                We'll review your request and contact you within 24 hours
             </p>
         </div>
     </form>
@@ -184,11 +213,6 @@
     font-size: 1rem;
 }
 
-.form-label .icon {
-    margin-right: 8px;
-    font-size: 1.1rem;
-}
-
 .form-input,
 .form-select,
 .form-textarea {
@@ -268,6 +292,90 @@
     margin-top: 15px;
     color: #666;
     font-size: 0.9rem;
+}
+
+/* Terms and Conditions Styling */
+.terms-container {
+    background: rgba(102, 126, 234, 0.05);
+    border-radius: 15px;
+    padding: 25px;
+    border: 2px solid rgba(102, 126, 234, 0.1);
+}
+
+.terms-box {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-left: 4px solid #667eea;
+}
+
+.checkbox-container {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.terms-checkbox {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    cursor: pointer;
+    accent-color: #667eea;
+}
+
+.checkbox-label {
+    font-size: 1rem;
+    color: #333;
+    cursor: pointer;
+    line-height: 1.4;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.checkbox-label a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.checkbox-label a:hover {
+    text-decoration: underline;
+}
+
+/* Custom checkbox styling */
+.terms-checkbox {
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #667eea;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.terms-checkbox:checked {
+    background: #667eea;
+    border-color: #667eea;
+}
+
+.terms-checkbox:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.terms-checkbox:hover {
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
 /* Mobile Responsiveness */

@@ -2,7 +2,7 @@
 {% block content %}
 <div class="admin-card">
     <div class="admin-header">
-        <h1 class="admin-title">📊 Admin Dashboard</h1>
+        <h1 class="admin-title">Admin Dashboard</h1>
         <p style="color: #666;">Welcome to the repair booking management system</p>
     </div>
     
@@ -18,11 +18,13 @@
     
     <div class="admin-actions" style="text-align: center;">
         <a href="/admin/download_csv" class="btn btn-success">
-            📥 Download Bookings CSV
+            Download Bookings CSV
         </a>
-        <a href="/admin/logout" class="btn btn-danger ms-3">
-            🚪 Logout
-        </a>
+        <div style="margin-top: 20px;">
+            <a href="/admin/logout" class="btn btn-danger" style="display: inline-block;">
+                Logout
+            </a>
+        </div>
     </div>
 </div>
 {% endblock %}
