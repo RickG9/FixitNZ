@@ -1,24 +1,33 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin</title>
-</head>
-<body>
-    {% extends "base_admin.html" %}
+{% extends "base_admin.html" %}
 {% block content %}
-<form method="post" action="/">
-  <div class="mb-3">
-    <label for="name" class="form-label">Username</label>
-    <input type="text" class="form-control" id="admin_username" name="admin_username" required>
-  </div>
-  <div class="mb-3">
-    <label for="email" class="form-label">Password</label>
-    <input type="text" class="form-control" id="admin_password" name="admin_password" required>
+<div class="admin-card">
+    <div class="admin-header">
+        <h1 class="admin-title">🔐 Admin Login</h1>
+        <p style="color: #666;">Enter your credentials to access the admin panel</p>
     </div>
-  <button type="submit" class="btn btn-primary">Login</button>
-</form>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <form method="post" action="/admin">
+        <div class="mb-3">
+            <label for="admin_username" class="form-label">👤 Username</label>
+            <input type="text" class="form-control" id="admin_username" name="admin_username" 
+                   placeholder="Enter username" required>
+        </div>
+        <div class="mb-3">
+            <label for="admin_password" class="form-label">🔒 Password</label>
+            <input type="password" class="form-control" id="admin_password" name="admin_password" 
+                   placeholder="Enter password" required>
+        </div>
+        <button type="submit" class="btn">Login to Admin Panel</button>
+    </form>
+</div>
 {% endblock %}
-</body>
-</html>

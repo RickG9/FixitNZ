@@ -1,22 +1,60 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, flash, session, make_response
 from datetime import datetime
+import sqlite3
 import csv
+import io
 import os
 
 app = Flask(__name__)
-BOOKINGS_FILE = 'bookings.txt'
+app.secret_key = 'your-secret-key-here'  # Change this to a secure random key
+DATABASE = 'bookings.db'
+
+def init_db():
+    """Initialize the database with the bookings table."""
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS bookings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            phone TEXT,
+            device TEXT NOT NULL,
+            repair TEXT,
+            issue TEXT,
+            booking_time TEXT NOT NULL
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
 def save_booking(booking_data):
-    # Check if the text file exists already.
-    file_exists = os.path.isfile(BOOKINGS_FILE)
-    # Open the file in append mode. Using csv.DictWriter ensures proper CSV formatting.
-    with open(BOOKINGS_FILE, mode='a', newline='') as csvfile:
-        fieldnames = ['name', 'email', 'phone', 'device', 'issue', 'booking_time']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        # Write header only if file does not exist.
-        if not file_exists:
-            writer.writeheader()
-        writer.writerow(booking_data)
+    """Save booking data to SQLite database."""
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO bookings (name, email, phone, device, repair, issue, booking_time)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        booking_data['name'],
+        booking_data['email'],
+        booking_data['phone'],
+        booking_data['device'],
+        booking_data['repair'],
+        booking_data['issue'],
+        booking_data['booking_time']
+    ))
+    conn.commit()
+    conn.close()
+
+def get_all_bookings():
+    """Retrieve all bookings from the database."""
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute('SELECT name, email, phone, device, repair, issue, booking_time FROM bookings')
+    bookings = cursor.fetchall()
+    conn.close()
+    return bookings
 
 @app.route('/', methods=['GET', 'POST'])
 def book_inspection():
@@ -24,9 +62,10 @@ def book_inspection():
         # Retrieve form data
         name = request.form.get('name')
         email = request.form.get('email')
-        # Note: the key for phone may be adjusted to match your form field name.
-        phone = request.form.get('phone (optional)', '')
+        # Updated to match the actual form field name
+        phone = request.form.get('phone', '')
         device = request.form.get('device')
+        repair = request.form.get('repair', '')
         issue = request.form.get('issue', '')
         booking_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
@@ -35,10 +74,11 @@ def book_inspection():
             'email': email,
             'phone': phone,
             'device': device,
+            'repair': repair,
             'issue': issue,
             'booking_time': booking_time
         }
-        # Save booking details to the text file.
+        # Save booking details to the database
         save_booking(booking_data)
         return redirect(url_for('booking_success'))
 
@@ -49,9 +89,67 @@ def book_inspection():
 def booking_success():
     return render_template('booking_success.html')
 
-@app.route('/admin')
+@app.route('/admin', methods=['GET', 'POST'])
 def admin_view():
+    if request.method == 'POST':
+        username = request.form.get('admin_username')
+        password = request.form.get('admin_password')
+        
+        # Check if credentials are correct
+        if username == 'admin' and password == 'admin':
+            session['admin_logged_in'] = True
+            return redirect(url_for('admin_dashboard'))
+        else:
+            flash('Invalid username or password', 'error')
+    
     return render_template('admin_form.html')
 
+@app.route('/admin/dashboard')
+def admin_dashboard():
+    # Check if admin is logged in
+    if not session.get('admin_logged_in'):
+        flash('Please log in first', 'error')
+        return redirect(url_for('admin_view'))
+    
+    return render_template('admin_dashboard.html')
+
+@app.route('/admin/download_csv')
+def download_csv():
+    # Check if admin is logged in
+    if not session.get('admin_logged_in'):
+        flash('Please log in first', 'error')
+        return redirect(url_for('admin_view'))
+    
+    # Get all bookings from database
+    bookings = get_all_bookings()
+    
+    # Create CSV content
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Write header
+    writer.writerow(['Name', 'Email', 'Phone', 'Device', 'Repair', 'Issue', 'Booking Time'])
+    
+    # Write data
+    for booking in bookings:
+        writer.writerow(booking)
+    
+    # Create response
+    csv_content = output.getvalue()
+    output.close()
+    
+    response = make_response(csv_content)
+    response.headers['Content-Disposition'] = 'attachment; filename=bookings.csv'
+    response.headers['Content-Type'] = 'text/csv'
+    
+    return response
+
+@app.route('/admin/logout')
+def admin_logout():
+    session.pop('admin_logged_in', None)
+    flash('Logged out successfully', 'success')
+    return redirect(url_for('admin_view'))
+
 if __name__ == '__main__':
+    init_db()  # Initialize database on startup
     app.run(debug=True) 

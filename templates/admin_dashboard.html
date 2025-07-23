@@ -1,0 +1,28 @@
+{% extends "base_admin.html" %}
+{% block content %}
+<div class="admin-card">
+    <div class="admin-header">
+        <h1 class="admin-title">📊 Admin Dashboard</h1>
+        <p style="color: #666;">Welcome to the repair booking management system</p>
+    </div>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    
+    <div class="admin-actions" style="text-align: center;">
+        <a href="/admin/download_csv" class="btn btn-success">
+            📥 Download Bookings CSV
+        </a>
+        <a href="/admin/logout" class="btn btn-danger ms-3">
+            🚪 Logout
+        </a>
+    </div>
+</div>
+{% endblock %}

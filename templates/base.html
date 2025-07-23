@@ -15,38 +15,67 @@
     crossorigin=""></script>
   <style>
     body {
-      background-color: #ffffff;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: #212529;
+      min-height: 100vh;
+      margin: 0;
+      padding: 0;
     }
     .container {
-      background-color: #ffffff;
+      background: transparent;
       color: #212529;
     }
     #map { height: 180px; }
-    @media (prefers-color-scheme: dark) {
-      body {
-        background-color: #121212;
-        color: #e0e0e0;
-      }
-      .container {
-        background-color: #121212;
-        color: #e0e0e0;
-      }
-      .form-control {
-        background-color: #343a40;
-        color: #ffffff;
-        border-color: #6c757d;
-      }
-      .btn {
-        background-color: #495057;
-        border-color: #6c757d;
-      }
+    
+    /* Form styling for consistency */
+    .form-control, select {
+      background-color: white;
+      color: #333;
+      border: 2px solid #e1e5e9;
+      border-radius: 12px;
+      padding: 15px 20px;
+      transition: all 0.3s ease;
+    }
+    
+    .form-control:focus, select:focus {
+      background-color: white;
+      color: #333;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      outline: none;
+    }
+    
+    .btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border: none;
+      color: white;
+      padding: 12px 30px;
+      border-radius: 25px;
+      transition: all 0.3s ease;
+      font-weight: 600;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+      background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+      color: white;
+    }
+    
+    /* Card styling for admin pages */
+    .admin-card {
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(10px);
+      max-width: 500px;
+      margin: 50px auto;
     }
   </style>
 </head>
 <body>
   <div class="container mt-5">
-    <h1 class="mb-4">Repair Booking System</h1>
     {% block content %}{% endblock %}
   </div>
 </body>
