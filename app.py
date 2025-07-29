@@ -8,12 +8,12 @@ import secrets
 import hashlib
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'  # Change this to a secure random key
+app.secret_key = 'hAcgqVoa+evvQeX3g/RiciTJk0m1fzlAuZysqpwbmU+7mmD8gc9JLtQP2hLBqwCZ'  # Change this to a secure random key
 DATABASE = 'bookings.db'
 
 # Admin credentials and session management
-ADMIN_USERNAME = 'admin'
-ADMIN_PASSWORD = 'admin'
+ADMIN_USERNAME = 'admin' # Please change this to a secure username
+ADMIN_PASSWORD = 'admin' # Please change this to a secure password
 ADMIN_SESSIONS = {}  # Store active admin sessions
 
 def generate_session_token():
@@ -152,8 +152,6 @@ def download_csv():
     if not validate_admin_session():
         flash('Please log in first', 'error')
         return redirect(url_for('admin_view'))
-        flash('Please log in first', 'error')
-        return redirect(url_for('admin_view'))
     
     # Get all bookings from database
     bookings = get_all_bookings()
@@ -195,6 +193,9 @@ def admin_logout():
 def terms_and_conditions():
     return render_template('terms.html')
 
+# Initialize database when module is imported (for production)
+init_db()
+
 if __name__ == '__main__':
-    init_db()  # Initialize database on startup
-    app.run(debug=True) 
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False) 

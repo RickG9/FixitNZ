@@ -14,12 +14,16 @@
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""></script>
   <style>
-    body {
+    html, body {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: #212529;
       min-height: 100vh;
       margin: 0;
       padding: 0;
+      /* Prevent overscroll white background */
+      overscroll-behavior: none;
+      /* Ensure gradient covers full viewport */
+      background-attachment: fixed;
     }
     .container {
       background: transparent;
