@@ -6,10 +6,17 @@ import io
 import os
 import secrets
 import hashlib
+import requests  # Add this import for reCAPTCHA verification
 
 app = Flask(__name__)
 app.secret_key = 'hAcgqVoa+evvQeX3g/RiciTJk0m1fzlAuZysqpwbmU+7mmD8gc9JLtQP2hLBqwCZ'  # Change this to a secure random key
 DATABASE = 'bookings.db'
+
+# reCAPTCHA v3 configuration
+RECAPTCHA_SITE_KEY = '6LfrKpQrAAAAAMmi51xrVRwb0LBFDBw-eoPPDrLc'
+RECAPTCHA_SECRET_KEY = '6LfrKpQrAAAAAGS59CTJ0wiiBIQGJyTlflsvctzI'  # You need to get this from Google reCAPTCHA console
+RECAPTCHA_VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify'
+RECAPTCHA_THRESHOLD = 0.5  # Minimum score required (0.0 = bot, 1.0 = human)
 
 # Admin credentials and session management
 ADMIN_USERNAME = 'admin' # Please change this to a secure username

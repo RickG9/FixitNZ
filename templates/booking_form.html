@@ -120,7 +120,7 @@
 
         <!-- Submit Section -->
         <div class="form-submit">
-            <button type="submit" class="submit-btn">
+            <button type="submit" class="submit-btn" id="submit-btn">
                 Book My Repair
             </button>
             <p class="submit-note">
@@ -129,6 +129,45 @@
         </div>
     </form>
 </div>
+
+<!-- reCAPTCHA v3 Script -->
+<script src="https://www.google.com/recaptcha/api.js?render={{ site_key }}"></script>
+
+<script>
+// reCAPTCHA v3 integration
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('.booking-form');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Verifying...';
+        
+        grecaptcha.ready(function() {
+            grecaptcha.execute('{{ site_key }}', {action: 'booking_submit'}).then(function(token) {
+                // Add the token to the form
+                const tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = 'g-recaptcha-response';
+                tokenInput.value = token;
+                form.appendChild(tokenInput);
+                
+                // Submit the form
+                form.submit();
+            }).catch(function(error) {
+                // Reset button state on error
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Book My Repair';
+                console.error('reCAPTCHA error:', error);
+                alert('Security verification failed. Please try again.');
+            });
+        });
+    });
+});
+</script>
 
 <style>
 /* Modern Booking Form Styles */
