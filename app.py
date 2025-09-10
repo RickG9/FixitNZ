@@ -9,8 +9,12 @@ import hashlib
 import requests  # Add this import for reCAPTCHA verification
 
 app = Flask(__name__)
-app.secret_key = 'hAcgqVoa+evvQeX3g/RiciTJk0m1fzlAuZysqpwbmU+7mmD8gc9JLtQP2hLBqwCZ'  # Change this to a secure random key
-DATABASE = 'bookings.db'
+app.secret_key = 'hAcgqVoa+evvQeX3g/RiciTJk0m1fzlAuZysqpwbmU+7mmD8gc9JLtQP2hLBqwCZ'  # TODO: move to environment variable
+
+# SQLite file path: On Vercel (serverless, read-only code FS) only /tmp is writable.
+# This allows the function to start instead of crashing on init_db(), but data is NOT persistent between cold starts.
+BASE_DB_DIR = '/tmp' if os.environ.get('VERCEL') else os.path.dirname(os.path.abspath(__file__))
+DATABASE = os.path.join(BASE_DB_DIR, 'bookings.db')
 
 # reCAPTCHA v3 configuration (keys can be disabled via settings)
 RECAPTCHA_SITE_KEY = '6LfrKpQrAAAAAMmi51xrVRwb0LBFDBw-eoPPDrLc'
