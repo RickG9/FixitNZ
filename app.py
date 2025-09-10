@@ -12,9 +12,9 @@ app = Flask(__name__)
 app.secret_key = 'hAcgqVoa+evvQeX3g/RiciTJk0m1fzlAuZysqpwbmU+7mmD8gc9JLtQP2hLBqwCZ'  # Change this to a secure random key
 DATABASE = 'bookings.db'
 
-# reCAPTCHA v3 configuration
+# reCAPTCHA v3 configuration (keys can be disabled via settings)
 RECAPTCHA_SITE_KEY = '6LfrKpQrAAAAAMmi51xrVRwb0LBFDBw-eoPPDrLc'
-RECAPTCHA_SECRET_KEY = '6LfrKpQrAAAAAGS59CTJ0wiiBIQGJyTlflsvctzI'  # You need to get this from Google reCAPTCHA console
+RECAPTCHA_SECRET_KEY = '6LfrKpQrAAAAAGS59CTJ0wiiBIQGJyTlflsvctzI'
 RECAPTCHA_VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify'
 RECAPTCHA_THRESHOLD = 0.5  # Minimum score required (0.0 = bot, 1.0 = human)
 
@@ -50,8 +50,39 @@ def init_db():
             booking_time TEXT NOT NULL
         )
     ''')
+    # Settings table for feature toggles (e.g., reCAPTCHA)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )
+    ''')
+    # Insert default setting for reCAPTCHA (disabled by default so form still works if keys broken)
+    cursor.execute('''
+        INSERT OR IGNORE INTO settings (key, value) VALUES ('recaptcha_enabled', '0')
+    ''')
     conn.commit()
     conn.close()
+
+def get_setting(key, default=None):
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute('SELECT value FROM settings WHERE key = ?', (key,))
+    row = cursor.fetchone()
+    conn.close()
+    if row is None:
+        return default
+    return row[0]
+
+def set_setting(key, value):
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', (key, value))
+    conn.commit()
+    conn.close()
+
+def recaptcha_is_enabled():
+    return get_setting('recaptcha_enabled', '0') == '1'
 
 def save_booking(booking_data):
     """Save booking data to SQLite database."""
@@ -93,12 +124,39 @@ def book_inspection():
         repair = request.form.get('repair', '')
         issue = request.form.get('issue', '')
         booking_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+        # Optional reCAPTCHA verification if enabled
+        if recaptcha_is_enabled():
+            token = request.form.get('g-recaptcha-response')
+            if not token:
+                flash('Security verification failed. Please retry.', 'error')
+                return render_template('booking_form.html', recaptcha_enabled=True, site_key=RECAPTCHA_SITE_KEY)
+            try:
+                verify_resp = requests.post(
+                    RECAPTCHA_VERIFY_URL,
+                    data={
+                        'secret': RECAPTCHA_SECRET_KEY,
+                        'response': token,
+                        'remoteip': request.remote_addr
+                    },
+                    timeout=5
+                )
+                verify_json = verify_resp.json()
+                success = verify_json.get('success')
+                score = verify_json.get('score', 0)
+                action = verify_json.get('action')
+                if not success or score < RECAPTCHA_THRESHOLD or action != 'booking_submit':
+                    flash('Suspicious activity detected. Please try again.', 'error')
+                    return render_template('booking_form.html', recaptcha_enabled=True, site_key=RECAPTCHA_SITE_KEY)
+            except requests.RequestException:
+                flash('Security service unavailable. Please try again later.', 'error')
+                return render_template('booking_form.html', recaptcha_enabled=True, site_key=RECAPTCHA_SITE_KEY)
         
         # Check if terms and conditions are accepted
         terms_accepted = request.form.get('terms_accepted')
         if not terms_accepted:
             flash('You must accept the Terms and Conditions to proceed.', 'error')
-            return render_template('booking_form.html')
+            return render_template('booking_form.html', recaptcha_enabled=recaptcha_is_enabled(), site_key=RECAPTCHA_SITE_KEY if recaptcha_is_enabled() else None)
 
         booking_data = {
             'name': name,
@@ -114,7 +172,7 @@ def book_inspection():
         return redirect(url_for('booking_success'))
 
     # Render the booking form
-    return render_template('booking_form.html')
+    return render_template('booking_form.html', recaptcha_enabled=recaptcha_is_enabled(), site_key=RECAPTCHA_SITE_KEY if recaptcha_is_enabled() else None)
 
 @app.route('/success')
 def booking_success():
@@ -150,8 +208,18 @@ def admin_dashboard():
     if not validate_admin_session():
         flash('Please log in first', 'error')
         return redirect(url_for('admin_view'))
-    
-    return render_template('admin_dashboard.html')
+    return render_template('admin_dashboard.html', recaptcha_enabled=recaptcha_is_enabled())
+
+@app.route('/admin/recaptcha/toggle', methods=['POST'])
+def toggle_recaptcha():
+    if not validate_admin_session():
+        flash('Please log in first', 'error')
+        return redirect(url_for('admin_view'))
+    # Flip setting
+    new_value = '0' if recaptcha_is_enabled() else '1'
+    set_setting('recaptcha_enabled', new_value)
+    flash(f"reCAPTCHA {'enabled' if new_value == '1' else 'disabled'} successfully", 'success')
+    return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/download_csv')
 def download_csv():

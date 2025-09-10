@@ -17,13 +17,22 @@
     {% endwith %}
     
     <div class="admin-actions" style="text-align: center;">
-        <a href="/admin/download_csv" class="btn btn-success">
-            Download Bookings CSV
-        </a>
+        <a href="/admin/download_csv" class="btn btn-success">Download Bookings CSV</a>
+        <form method="post" action="/admin/recaptcha/toggle" style="display:inline-block; margin-left:10px;">
+            <button type="submit" class="btn" style="width:auto; background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);">
+                {{ 'Disable reCAPTCHA' if recaptcha_enabled else 'Enable reCAPTCHA' }}
+            </button>
+        </form>
+        <div style="margin-top:10px; font-size:0.9rem; color:#555;">
+            reCAPTCHA is currently
+            {% if recaptcha_enabled %}
+                <strong style="color: green;">ENABLED</strong>
+            {% else %}
+                <strong style="color: red;">DISABLED</strong>
+            {% endif %}
+        </div>
         <div style="margin-top: 20px;">
-            <a href="/admin/logout" class="btn btn-danger" style="display: inline-block;">
-                Logout
-            </a>
+            <a href="/admin/logout" class="btn btn-danger" style="display: inline-block;">Logout</a>
         </div>
     </div>
 </div>
