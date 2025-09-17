@@ -94,10 +94,10 @@
         </div>
 
         <!-- Terms and Conditions Section -->
-        <div class="form-section">
-            <h3 class="section-title">Terms and Conditions</h3>
+        <div class="form-section terms-serif">
+            <h3 class="section-title" style="font-family: var(--font-sans) !important;">Terms and Conditions</h3>
             <div class="form-group">
-                <div class="terms-container">
+                <div class="terms-container font-serif">
                     <div class="terms-box">
                         <h4 style="color: #667eea; margin-bottom: 15px;">Data Usage Agreement</h4>
                         <p style="color: #666; margin-bottom: 15px;">
@@ -249,10 +249,10 @@
 .form-textarea {
     width: 100%;
     padding: 15px 20px;
-    border: 2px solid #e1e5e9;
+    border: 2px solid #b5b5b5; /* unified grey border */
     border-radius: 12px;
     font-size: 1rem;
-    transition: all 0.3s ease;
+    transition: all 0.25s ease;
     background: white;
     box-sizing: border-box;
 }
@@ -454,15 +454,29 @@
 .form-section:nth-child(4) { animation-delay: 0.3s; }
 
 /* Input validation styling */
-.form-input:invalid:not(:placeholder-shown),
-.form-select:invalid {
-    border-color: #ef4444;
-    background-color: #fef2f2;
-}
-
-.form-input:valid,
-.form-select:valid {
-    border-color: #10b981;
-}
+.invalid-field { border-color:#ef4444 !important; background-color:#fef2f2 !important; }
+.valid-field { border-color:#10b981 !important; }
+input[type=email]:invalid:not(:focus):not(:placeholder-shown){border-color:#ef4444;background:#fef2f2;}
+input[type=email]:valid{border-color:#10b981;}
 </style>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+    const selects=[document.getElementById('device'),document.getElementById('repair')];
+    selects.forEach(sel=>{
+        if(!sel) return;
+        sel.addEventListener('blur',function(){
+            if(!this.value){
+                this.classList.remove('valid-field');
+                this.classList.add('invalid-field');
+            }
+        });
+        sel.addEventListener('change',function(){
+            if(this.value){
+                this.classList.remove('invalid-field');
+                this.classList.add('valid-field');
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

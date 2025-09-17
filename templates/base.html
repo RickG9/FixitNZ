@@ -7,6 +7,7 @@
   <script src="https://www.google.com/recaptcha/enterprise.js?render=6LfrKpQrAAAAAMmi51xrVRwb0LBFDBw-eoPPDrLc"></script>
   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/logo.ico') }}">
   <style>
+    :root { --font-sans: 'Helvetica Neue', Arial, sans-serif; --font-serif: Georgia, 'Times New Roman', serif; }
     html, body {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: #212529;
@@ -17,7 +18,10 @@
       overscroll-behavior: none;
       /* Ensure gradient covers full viewport */
       background-attachment: fixed;
+      font-family: var(--font-sans);
     }
+    .font-serif { font-family: var(--font-serif) !important; }
+    .terms-serif * { font-family: var(--font-serif) !important; }
     .container {
       background: transparent;
       color: #212529;
