@@ -16,9 +16,8 @@
         {% endif %}
     {% endwith %}
     
-    <div class="admin-actions" style="text-align: center;">
-        <a href="/admin/download_csv" class="btn btn-success">Download Bookings CSV</a>
-        <form method="post" action="/admin/recaptcha/toggle" style="display:inline-block; margin-left:10px;">
+    <div class="admin-actions" style="text-align: center; margin-bottom:30px;">
+        <form method="post" action="/admin/recaptcha/toggle" style="display:inline-block;">
             <button type="submit" class="btn" style="width:auto; background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);">
                 {{ 'Disable reCAPTCHA' if recaptcha_enabled else 'Enable reCAPTCHA' }}
             </button>
@@ -31,9 +30,60 @@
                 <strong style="color: red;">DISABLED</strong>
             {% endif %}
         </div>
-        <div style="margin-top: 20px;">
-            <a href="/admin/logout" class="btn btn-danger" style="display: inline-block;">Logout</a>
+        <div style="margin-top:25px;">
+            <form method="post" action="/admin/bookings/plain" style="max-width:320px; margin:0 auto; text-align:left;">
+                <label class="form-label" style="font-size:0.85rem;">Confirm Admin Password to View Bookings</label>
+                <input type="password" name="admin_password_confirm" placeholder="Password" class="form-control" required>
+                <button type="submit" class="btn btn-success" style="width:100%; margin-top:5px;">View Bookings</button>
+                <p style="color:#555; font-size:0.7rem; margin-top:6px; line-height:1.2;">For security, you must re-enter your password to access raw customer data.</p>
+            </form>
         </div>
+    </div>
+
+    <hr style="margin:30px 0;">
+    <h2 style="font-size:1.3rem; font-weight:600; color:#333; margin-bottom:15px;">Availability Settings</h2>
+    {% set availability_days = get_setting('availability_days','0,1,2,3,4') %}
+    {% set start_hour = get_setting('availability_start_hour','8') %}
+    {% set end_hour = get_setting('availability_end_hour','20') %}
+    {% set cooldown_minutes = get_setting('cooldown_minutes','120') %}
+    {% set max_bookings_per_day = get_setting('max_bookings_per_day','7') %}
+    <form method="post" action="/admin/availability/update">
+        <div class="mb-3">
+            <label class="form-label">Available Weekdays</label>
+            <div style="display:flex; flex-wrap:wrap; gap:10px;">
+                {% for i, day in [(0,'Mon'),(1,'Tue'),(2,'Wed'),(3,'Thu'),(4,'Fri'),(5,'Sat'),(6,'Sun')] %}
+                <label style="display:flex; align-items:center; gap:6px; background:#f1f5f9; padding:6px 10px; border-radius:8px; font-size:0.85rem;">
+                    <input type="checkbox" name="days" value="{{ i }}" {% if i|string in availability_days.split(',') %}checked{% endif %}>
+                    {{ day }}
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="mb-3" style="display:flex; gap:15px;">
+            <div style="flex:1;">
+                <label class="form-label">Start Hour (24h)</label>
+                <input class="form-control" type="number" name="start_hour" min="0" max="23" value="{{ start_hour }}" required>
+            </div>
+            <div style="flex:1;">
+                <label class="form-label">End Hour (24h)</label>
+                <input class="form-control" type="number" name="end_hour" min="1" max="24" value="{{ end_hour }}" required>
+            </div>
+        </div>
+        <div class="mb-3" style="display:flex; gap:15px;">
+            <div style="flex:1;">
+                <label class="form-label">Cooldown (minutes)</label>
+                <input class="form-control" type="number" name="cooldown_minutes" min="0" step="15" value="{{ cooldown_minutes }}" required>
+            </div>
+            <div style="flex:1;">
+                <label class="form-label">Max Bookings / Day</label>
+                <input class="form-control" type="number" name="max_bookings_per_day" min="1" value="{{ max_bookings_per_day }}" required>
+            </div>
+        </div>
+        <button type="submit" class="btn" style="width:100%;">Update Availability</button>
+    </form>
+
+    <div style="margin-top: 30px; text-align:center;">
+        <a href="/admin/logout" class="btn btn-danger" style="display: inline-block;">Logout</a>
     </div>
 </div>
 {% endblock %}

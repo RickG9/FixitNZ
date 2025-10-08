@@ -27,7 +27,7 @@
                         Full Name *
                     </label>
                     <input type="text" class="form-input" id="name" name="name" 
-                           placeholder="Enter your full name" required>
+                           placeholder="Enter your full name"   >
                 </div>
                 <div class="form-group">
                     <label for="email" class="form-label">
@@ -42,7 +42,7 @@
                     Phone Number (Optional)
                 </label>
                 <input type="tel" class="form-input" id="phone" name="phone" 
-                       placeholder="+64 (020) 123-4567">
+                       placeholder="+64 022 123 4567">
             </div>
         </div>
 
@@ -91,6 +91,26 @@
                 <textarea class="form-textarea" id="issue" name="issue" rows="1" 
                           placeholder="Please describe what's wrong with your device. Include when the problem started, any error messages, and what you've already tried..."></textarea>
             </div>
+        </div>
+
+        <!-- Scheduling Section -->
+        <div class="form-section" id="scheduling-section">
+            <h3 class="section-title">Select Appointment</h3>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="scheduled_date" class="form-label">Date (Next 2 Weeks, no same-day) *</label>
+                    <input type="date" class="form-input" id="scheduled_date" name="scheduled_date" required>
+                    <small style="color:#666;">Only available days are enabled.</small>
+                </div>
+                <div class="form-group">
+                    <label for="scheduled_time" class="form-label">Time Slot *</label>
+                    <select class="form-select" id="scheduled_time" name="scheduled_time" required disabled>
+                        <option value="" disabled selected>Select date first</option>
+                    </select>
+                    <small id="slot-help" style="color:#666;">Slots refresh when you pick a date.</small>
+                </div>
+            </div>
+            <div id="slot-error" style="display:none; color:#dc2626; font-size:0.9rem; margin-top:5px;"></div>
         </div>
 
         <!-- Terms and Conditions Section -->
@@ -476,6 +496,61 @@ document.addEventListener('DOMContentLoaded',function(){
                 this.classList.add('valid-field');
             }
         });
+    });
+
+    // Scheduling logic
+    const dateInput = document.getElementById('scheduled_date');
+    const timeSelect = document.getElementById('scheduled_time');
+    const slotError = document.getElementById('slot-error');
+
+    // Compute min/max date (tomorrow to +14 days)
+    const now = new Date();
+    const minDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1); // tomorrow
+    const maxDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 14); // two weeks
+    dateInput.min = minDate.toISOString().split('T')[0];
+    dateInput.max = maxDate.toISOString().split('T')[0];
+
+    async function fetchSlots(dateStr){
+        timeSelect.innerHTML = '<option disabled selected>Loading...</option>';
+        timeSelect.disabled = true;
+        slotError.style.display='none';
+        try{
+            const resp = await fetch(`/api/available_slots?date=${encodeURIComponent(dateStr)}`);
+            const data = await resp.json();
+            if(data.error){
+                slotError.textContent = data.error;
+                slotError.style.display='block';
+                timeSelect.innerHTML = '<option disabled selected>No slots</option>';
+                return;
+            }
+            if(!data.slots || data.slots.length===0){
+                slotError.textContent = 'No available slots for this date. Please choose another date.';
+                slotError.style.display='block';
+                timeSelect.innerHTML = '<option disabled selected>No slots available</option>';
+                return;
+            }
+            timeSelect.innerHTML = '<option disabled selected>Select a time</option>' + data.slots.map(s=>`<option value="${s}">${s}</option>`).join('');
+            timeSelect.disabled = false;
+        }catch(e){
+            slotError.textContent = 'Failed to retrieve slots. Please try again.';
+            slotError.style.display='block';
+            timeSelect.innerHTML = '<option disabled selected>Error loading</option>';
+        }
+    }
+
+    dateInput.addEventListener('change', ()=>{
+        const val = dateInput.value;
+        if(!val){return;}
+        // Basic client-side constraint: ensure > today and within 14 days
+        const picked = new Date(val + 'T00:00:00');
+        if(picked <= now || picked > maxDate){
+            slotError.textContent = 'Date must be within the next 2 weeks and not today.';
+            slotError.style.display='block';
+            timeSelect.innerHTML = '<option disabled selected>Invalid date</option>';
+            timeSelect.disabled = true;
+            return;
+        }
+        fetchSlots(val);
     });
 });
 </script>
