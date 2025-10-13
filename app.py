@@ -219,7 +219,7 @@ def get_booking_by_id(booking_id: int):
     conn.close()
     return row
 
-def set_booking_status(booking_id: int, status: str, message: str | None):
+def set_booking_status(booking_id: int, status: str, message: Optional[str]):
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
     now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -673,6 +673,17 @@ def admin_logout():
 @app.route('/terms')
 def terms_and_conditions():
     return render_template('terms.html')
+
+@app.route('/health')
+def health():
+    try:
+        # basic DB touch to ensure it is accessible
+        conn = sqlite3.connect(DATABASE)
+        conn.execute('SELECT 1')
+        conn.close()
+        return jsonify({'status': 'ok'}), 200
+    except Exception as e:
+        return jsonify({'status': 'error', 'detail': str(e)}), 500
 
 @app.route('/api/available_slots')
 def api_available_slots():
