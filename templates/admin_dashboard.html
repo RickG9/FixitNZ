@@ -85,7 +85,7 @@
     <hr style="margin:30px 0;">
     <h2 style="font-size:1.3rem; font-weight:600; color:#333; margin-bottom:15px;">Email Settings</h2>
     {% set email_enabled = get_setting('email_enabled','0') %}
-    {% set from_email = get_setting('from_email','FixIt NZ <no-reply@example.com>') %}
+    {% set from_email = get_setting('from_email') %}
     {% set admin_email = get_setting('admin_email','') %}
     <form method="post" action="/admin/email/update">
         <div class="form-check" style="margin-bottom:15px;">

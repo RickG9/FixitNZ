@@ -82,7 +82,7 @@ def init_db():
         INSERT OR IGNORE INTO settings (key, value) VALUES ('email_enabled', '0')
     ''')
     cursor.execute('''
-        INSERT OR IGNORE INTO settings (key, value) VALUES ('from_email', 'FixIt NZ <no-reply@example.com>')
+        INSERT OR IGNORE INTO settings (key, value) VALUES ('from_email', '')
     ''')
     cursor.execute('''
         INSERT OR IGNORE INTO settings (key, value) VALUES ('admin_email', '')
@@ -266,7 +266,10 @@ def recreate_bookings_table():
             repair TEXT,
             issue TEXT,
             booking_time TEXT NOT NULL,
-            created_at TEXT
+            created_at TEXT,
+            status TEXT DEFAULT 'pending',
+            decision_message TEXT,
+            decided_at TEXT
         )
     ''')
     conn.commit()
