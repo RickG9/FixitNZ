@@ -5,9 +5,10 @@ import csv
 import io
 import os
 import secrets
-import hashlib
-import requests  # Add this import for reCAPTCHA verification
+import bcrypt
+import requests
 from datetime import timedelta
+from typing import Optional
 
 app = Flask(__name__)
 app.secret_key = 'hAcgqVoa+evvQeX3g/RiciTJk0m1fzlAuZysqpwbmU+7mmD8gc9JLtQP2hLBqwCZ'  # TODO: move to environment variable
@@ -23,10 +24,16 @@ RECAPTCHA_SECRET_KEY = '6LfrKpQrAAAAAGS59CTJ0wiiBIQGJyTlflsvctzI'
 RECAPTCHA_VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify'
 RECAPTCHA_THRESHOLD = 0.5  # Minimum score required (0.0 = bot, 1.0 = human)
 
+
 # Admin credentials and session management
 ADMIN_USERNAME = 'admin' # Please change this to a secure username
-ADMIN_PASSWORD = 'admin' # Please change this to a secure password
+# Store bcrypt hash of password (update this value after first run)
+ADMIN_PASSWORD_HASH = b'$2a$08$quMbpUdX/KLYwI2wq9KxsOqWYiQrTS41z5P8SNUD8MJPu0Xzko1X2'  # Placeholder, will be set below
 ADMIN_SESSIONS = {}  # Store active admin sessions
+
+# Helper to set password hash (run once, then copy value to ADMIN_PASSWORD_HASH above)
+def set_admin_password(password: str):
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
 def generate_session_token():
     """Generate a secure session token."""
@@ -53,7 +60,10 @@ def init_db():
             repair TEXT,
             issue TEXT,
             booking_time TEXT NOT NULL,
-            created_at TEXT  -- added later for distinguishing submission vs scheduled time
+            created_at TEXT,  -- time of submission
+            status TEXT DEFAULT 'pending',
+            decision_message TEXT,
+            decided_at TEXT
         )
     ''')
     # Settings table for feature toggles (e.g., reCAPTCHA)
@@ -67,6 +77,16 @@ def init_db():
     cursor.execute('''
         INSERT OR IGNORE INTO settings (key, value) VALUES ('recaptcha_enabled', '0')
     ''')
+    # Email settings defaults
+    cursor.execute('''
+        INSERT OR IGNORE INTO settings (key, value) VALUES ('email_enabled', '0')
+    ''')
+    cursor.execute('''
+        INSERT OR IGNORE INTO settings (key, value) VALUES ('from_email', 'FixIt NZ <no-reply@example.com>')
+    ''')
+    cursor.execute('''
+        INSERT OR IGNORE INTO settings (key, value) VALUES ('admin_email', '')
+    ''')
     # Migration: ensure created_at column exists (older deployments may miss it)
     cursor.execute("PRAGMA table_info(bookings)")
     cols = [r[1] for r in cursor.fetchall()]
@@ -76,6 +96,24 @@ def init_db():
             cursor.execute('UPDATE bookings SET created_at = booking_time WHERE created_at IS NULL OR created_at = \"\"')
         except sqlite3.OperationalError:
             pass  # ignore if cannot alter (unlikely)
+    # Migrations for new columns
+    cursor.execute("PRAGMA table_info(bookings)")
+    cols = [r[1] for r in cursor.fetchall()]
+    if 'status' not in cols:
+        try:
+            cursor.execute("ALTER TABLE bookings ADD COLUMN status TEXT DEFAULT 'pending'")
+        except sqlite3.OperationalError:
+            pass
+    if 'decision_message' not in cols:
+        try:
+            cursor.execute("ALTER TABLE bookings ADD COLUMN decision_message TEXT")
+        except sqlite3.OperationalError:
+            pass
+    if 'decided_at' not in cols:
+        try:
+            cursor.execute("ALTER TABLE bookings ADD COLUMN decided_at TEXT")
+        except sqlite3.OperationalError:
+            pass
 
     # Default availability / scheduling settings (stored in general settings table)
     defaults = {
@@ -114,6 +152,45 @@ def recaptcha_is_enabled():
 # Make settings accessor available inside Jinja templates (needed for admin dashboard)
 app.jinja_env.globals['get_setting'] = get_setting
 
+# ---------------- Email Helper ---------------- #
+def send_email(to_email: str, subject: str, html: str, text: Optional[str] = None) -> bool:
+    """Send an email via Resend API. Requires RESEND_API_KEY env var and email_enabled setting.
+    Returns True on success, False otherwise.
+    """
+    try:
+        if get_setting('email_enabled', '0') != '1':
+            return False
+    except Exception:
+        return False
+    api_key = os.environ.get('RESEND_API_KEY')
+    if not api_key:
+        print('[email] RESEND_API_KEY missing; email not sent')
+        return False
+    from_email = get_setting('from_email', 'FixIt NZ <no-reply@example.com>')
+    try:
+        resp = requests.post(
+            'https://api.resend.com/emails',
+            headers={
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type': 'application/json'
+            },
+            json={
+                'from': from_email,
+                'to': [to_email],
+                'subject': subject,
+                'html': html,
+                **({'text': text} if text else {})
+            },
+            timeout=10
+        )
+        if resp.status_code >= 200 and resp.status_code < 300:
+            return True
+        print('[email] Failed:', resp.status_code, resp.text)
+        return False
+    except requests.RequestException as e:
+        print('[email] Exception:', e)
+        return False
+
 def save_booking(booking_data):
     """Save booking data to SQLite database."""
     conn = sqlite3.connect(DATABASE)
@@ -134,12 +211,28 @@ def save_booking(booking_data):
     conn.commit()
     conn.close()
 
+def get_booking_by_id(booking_id: int):
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute('SELECT id, name, email, phone, device, repair, issue, booking_time, created_at, status, decision_message, decided_at FROM bookings WHERE id = ?', (booking_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row
+
+def set_booking_status(booking_id: int, status: str, message: str | None):
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    cursor.execute('UPDATE bookings SET status = ?, decision_message = ?, decided_at = ? WHERE id = ?', (status, message, now, booking_id))
+    conn.commit()
+    conn.close()
+
 def get_all_bookings():
     """Retrieve all bookings from the database."""
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
     # Include id and created_at for transparency
-    cursor.execute('SELECT id, name, email, phone, device, repair, issue, booking_time, created_at FROM bookings ORDER BY datetime(booking_time) ASC')
+    cursor.execute('SELECT id, name, email, phone, device, repair, issue, booking_time, created_at, status, decision_message, decided_at FROM bookings ORDER BY datetime(booking_time) ASC')
     bookings = cursor.fetchall()
     conn.close()
     return bookings
@@ -338,6 +431,45 @@ def book_inspection():
         }
         # Save booking details to the database
         save_booking(booking_data)
+        # Send emails (user + admin) if enabled
+        try:
+            # User receipt
+            user_subject = 'We received your booking request'
+            user_html = f"""
+                <p>Hi {name},</p>
+                <p>Thanks for your booking request. Here are the details:</p>
+                <ul>
+                  <li><b>Device:</b> {device}</li>
+                  <li><b>Repair:</b> {repair or 'N/A'}</li>
+                  <li><b>Issue:</b> {issue or 'N/A'}</li>
+                  <li><b>Requested time:</b> {booking_time}</li>
+                </ul>
+                <p>We'll review and confirm soon. If you need to make changes, reply to this email.</p>
+                <p>– FixIt NZ</p>
+            """
+            send_email(email, user_subject, user_html)
+
+            # Admin notice
+            admin_email = get_setting('admin_email', '')
+            if admin_email:
+                admin_subject = f'New booking from {name}'
+                admin_html = f"""
+                    <p>You have a new booking request:</p>
+                    <ul>
+                      <li><b>Name:</b> {name}</li>
+                      <li><b>Email:</b> {email}</li>
+                      <li><b>Phone:</b> {phone or '-'} </li>
+                      <li><b>Device:</b> {device}</li>
+                      <li><b>Repair:</b> {repair or 'N/A'}</li>
+                      <li><b>Issue:</b> {issue or 'N/A'}</li>
+                      <li><b>Requested time:</b> {booking_time}</li>
+                    </ul>
+                    <p>Log in to the admin portal to approve or decline:</p>
+                    <p><a href="{url_for('admin_view', _external=True)}">Open Admin</a></p>
+                """
+                send_email(admin_email, admin_subject, admin_html)
+        except Exception as e:
+            print('[email] send on create failed:', e)
         return redirect(url_for('booking_success'))
 
     # Render the booking form
@@ -352,9 +484,8 @@ def admin_view():
     if request.method == 'POST':
         username = request.form.get('admin_username')
         password = request.form.get('admin_password')
-        
         # Check if credentials are correct
-        if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+        if username == ADMIN_USERNAME and bcrypt.checkpw(password.encode('utf-8'), ADMIN_PASSWORD_HASH):
             # Generate a secure session token
             token = generate_session_token()
             session['admin_token'] = token
@@ -368,7 +499,6 @@ def admin_view():
             return redirect(url_for('admin_dashboard'))
         else:
             flash('Invalid username or password', 'error')
-    
     return render_template('admin_form.html')
 
 @app.route('/admin/dashboard')
@@ -397,11 +527,88 @@ def admin_bookings_plain():
         flash('Please log in first', 'error')
         return redirect(url_for('admin_view'))
     password = request.form.get('admin_password_confirm')
-    if password != ADMIN_PASSWORD:
+    if not bcrypt.checkpw(password.encode('utf-8'), ADMIN_PASSWORD_HASH):
         flash('Password confirmation failed.', 'error')
         return redirect(url_for('admin_dashboard'))
     bookings = get_all_bookings()
     return render_template('admin_bookings.html', bookings=bookings, recaptcha_enabled=recaptcha_is_enabled())
+
+@app.route('/admin/bookings/approve/<int:booking_id>', methods=['POST'])
+def admin_approve_booking(booking_id):
+    if not validate_admin_session():
+        flash('Please log in first', 'error')
+        return redirect(url_for('admin_view'))
+    b = get_booking_by_id(booking_id)
+    if not b:
+        flash('Booking not found.', 'error')
+        return redirect(url_for('admin_dashboard'))
+    set_booking_status(booking_id, 'approved', None)
+    # Email user
+    try:
+        user_email = b[2]
+        user_name = b[1]
+        when = b[7]
+        html = f"""
+            <p>Hi {user_name},</p>
+            <p>Your booking has been <b>approved</b>.</p>
+            <p><b>Scheduled time:</b> {when}</p>
+            <p>See you then! – FixIt NZ</p>
+        """
+        send_email(user_email, 'Your booking is confirmed', html)
+    except Exception as e:
+        print('[email] approve notify failed:', e)
+    flash(f'Booking {booking_id} approved and user notified.', 'success')
+    bookings = get_all_bookings()
+    return render_template('admin_bookings.html', bookings=bookings, recaptcha_enabled=recaptcha_is_enabled())
+
+@app.route('/admin/bookings/decline/<int:booking_id>', methods=['POST'])
+def admin_decline_booking(booking_id):
+    if not validate_admin_session():
+        flash('Please log in first', 'error')
+        return redirect(url_for('admin_view'))
+    reason = request.form.get('reason', '').strip()
+    b = get_booking_by_id(booking_id)
+    if not b:
+        flash('Booking not found.', 'error')
+        return redirect(url_for('admin_dashboard'))
+    set_booking_status(booking_id, 'declined', reason)
+    # Email user
+    try:
+        user_email = b[2]
+        user_name = b[1]
+        when = b[7]
+        html = f"""
+            <p>Hi {user_name},</p>
+            <p>Unfortunately, your booking request for <b>{when}</b> was declined.</p>
+            {f'<p><b>Reason:</b> {reason}</p>' if reason else ''}
+            <p>Please <a href="{url_for('book_inspection', _external=True)}">submit a new request</a> or contact us to reschedule.</p>
+            <p>– FixIt NZ</p>
+        """
+        send_email(user_email, 'Your booking request was declined', html)
+    except Exception as e:
+        print('[email] decline notify failed:', e)
+    flash(f'Booking {booking_id} declined and user notified.', 'success')
+    bookings = get_all_bookings()
+    return render_template('admin_bookings.html', bookings=bookings, recaptcha_enabled=recaptcha_is_enabled())
+
+@app.route('/admin/email/update', methods=['POST'])
+def update_email_settings():
+    if not validate_admin_session():
+        flash('Please log in first', 'error')
+        return redirect(url_for('admin_view'))
+    try:
+        enabled = '1' if request.form.get('email_enabled') == 'on' else '0'
+        from_email = request.form.get('from_email', '').strip()
+        admin_email = request.form.get('admin_email', '').strip()
+        if not from_email:
+            raise ValueError('From email is required when enabling email')
+        set_setting('email_enabled', enabled)
+        set_setting('from_email', from_email)
+        set_setting('admin_email', admin_email)
+        flash('Email settings updated.', 'success')
+    except Exception as e:
+        flash(f'Error updating email settings: {e}', 'error')
+    return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/bookings/delete/<int:booking_id>', methods=['POST'])
 def admin_delete_booking(booking_id):
@@ -409,7 +616,7 @@ def admin_delete_booking(booking_id):
         flash('Please log in first', 'error')
         return redirect(url_for('admin_view'))
     password = request.form.get('admin_password_confirm')
-    if password != ADMIN_PASSWORD:
+    if not bcrypt.checkpw(password.encode('utf-8'), ADMIN_PASSWORD_HASH):
         flash('Password confirmation failed.', 'error')
         return redirect(url_for('admin_dashboard'))
     delete_booking(booking_id)
@@ -424,7 +631,7 @@ def admin_clear_bookings():
         flash('Please log in first', 'error')
         return redirect(url_for('admin_view'))
     password = request.form.get('admin_password_confirm')
-    if password != ADMIN_PASSWORD:
+    if not bcrypt.checkpw(password.encode('utf-8'), ADMIN_PASSWORD_HASH):
         flash('Password confirmation failed.', 'error')
         return redirect(url_for('admin_dashboard'))
     clear_all_bookings()
@@ -440,7 +647,7 @@ def admin_reset_bookings():
         return redirect(url_for('admin_view'))
     password = request.form.get('admin_password_confirm')
     confirm_text = request.form.get('confirm_text', '')
-    if password != ADMIN_PASSWORD:
+    if not bcrypt.checkpw(password.encode('utf-8'), ADMIN_PASSWORD_HASH):
         flash('Password confirmation failed.', 'error')
         return redirect(url_for('admin_dashboard'))
     if confirm_text.strip().upper() != 'RESET':

@@ -82,6 +82,28 @@
         <button type="submit" class="btn" style="width:100%;">Update Availability</button>
     </form>
 
+    <hr style="margin:30px 0;">
+    <h2 style="font-size:1.3rem; font-weight:600; color:#333; margin-bottom:15px;">Email Settings</h2>
+    {% set email_enabled = get_setting('email_enabled','0') %}
+    {% set from_email = get_setting('from_email','FixIt NZ <no-reply@example.com>') %}
+    {% set admin_email = get_setting('admin_email','') %}
+    <form method="post" action="/admin/email/update">
+        <div class="form-check" style="margin-bottom:15px;">
+            <input class="form-check-input" type="checkbox" id="email_enabled" name="email_enabled" {% if email_enabled=='1' %}checked{% endif %}>
+            <label class="form-check-label" for="email_enabled">Enable email notifications</label>
+            <div style="font-size:0.85rem; color:#555;">Requires RESEND_API_KEY environment variable set on server.</div>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">From (name & email)</label>
+            <input class="form-control" type="text" name="from_email" value="{{ from_email }}" placeholder="FixIt NZ <no-reply@fixitnz.me>">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Admin email (notifications)</label>
+            <input class="form-control" type="email" name="admin_email" value="{{ admin_email }}" placeholder="owner@fixitnz.me">
+        </div>
+        <button type="submit" class="btn" style="width:100%;">Update Email Settings</button>
+    </form>
+
     <div style="margin-top: 30px; text-align:center;">
         <a href="/admin/logout" class="btn btn-danger" style="display: inline-block;">Logout</a>
     </div>
