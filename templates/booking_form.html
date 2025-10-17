@@ -187,7 +187,7 @@
     max-width: 800px;
     margin: 0 auto;
     padding: 20px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--brand-100) 0%, var(--brand-600) 100%);
     min-height: 100vh;
 }
 
@@ -240,7 +240,7 @@
     color: #333;
     margin-bottom: 25px;
     padding-bottom: 10px;
-    border-bottom: 3px solid #667eea;
+    border-bottom: 3px solid var(--brand-600);
     display: inline-block;
 }
 
@@ -281,8 +281,8 @@
 .form-select:focus,
 .form-textarea:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: var(--brand-600);
+    box-shadow: 0 0 0 3px rgba(106, 153, 78, 0.15);
     transform: translateY(-2px);
 }
 
@@ -290,7 +290,7 @@
     cursor: pointer;
     appearance: none;
     background-color: white !important;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23667eea' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236A994E' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
     background-position: right 12px center;
     background-repeat: no-repeat;
     background-size: 16px;
@@ -310,7 +310,7 @@
 }
 
 .submit-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--brand-600) 0%, var(--brand-800) 100%);
     color: white;
     border: none;
     padding: 18px 40px;
@@ -319,7 +319,7 @@
     border-radius: 50px;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 8px 25px rgba(56, 102, 65, 0.25);
     display: inline-flex;
     align-items: center;
     gap: 10px;
@@ -327,8 +327,8 @@
 
 .submit-btn:hover {
     transform: translateY(-3px);
-    box-shadow: 0 12px 35px rgba(102, 126, 234, 0.4);
-    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+    box-shadow: 0 12px 35px rgba(56, 102, 65, 0.35);
+    background: linear-gradient(135deg, var(--brand-100) 0%, var(--brand-800) 100%);
 }
 
 .submit-btn:active {
@@ -347,10 +347,10 @@
 
 /* Terms and Conditions Styling */
 .terms-container {
-    background: rgba(102, 126, 234, 0.05);
+    background: rgba(106, 153, 78, 0.06);
     border-radius: 15px;
     padding: 25px;
-    border: 2px solid rgba(102, 126, 234, 0.1);
+    border: 2px solid rgba(106, 153, 78, 0.15);
 }
 
 .terms-box {
@@ -358,7 +358,7 @@
     border-radius: 12px;
     padding: 20px;
     margin-bottom: 20px;
-    border-left: 4px solid #667eea;
+    border-left: 4px solid var(--brand-600);
 }
 
 .checkbox-container {
@@ -373,7 +373,7 @@
     height: 20px;
     margin: 0;
     cursor: pointer;
-    accent-color: #667eea;
+    accent-color: var(--brand-600);
 }
 
 .checkbox-label {
@@ -387,7 +387,7 @@
 }
 
 .checkbox-label a {
-    color: #667eea;
+    color: var(--brand-600);
     text-decoration: none;
     font-weight: 600;
 }
@@ -401,7 +401,7 @@
     appearance: none;
     width: 20px;
     height: 20px;
-    border: 2px solid #667eea;
+    border: 2px solid var(--brand-600);
     border-radius: 4px;
     background: white;
     cursor: pointer;
@@ -410,8 +410,8 @@
 }
 
 .terms-checkbox:checked {
-    background: #667eea;
-    border-color: #667eea;
+    background: var(--brand-600);
+    border-color: var(--brand-600);
 }
 
 .terms-checkbox:checked::after {
@@ -426,7 +426,7 @@
 }
 
 .terms-checkbox:hover {
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    box-shadow: 0 0 0 3px rgba(106, 153, 78, 0.15);
 }
 
 /* Mobile Responsiveness */

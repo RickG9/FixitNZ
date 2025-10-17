@@ -18,7 +18,7 @@
     
     <div class="admin-actions" style="text-align: center; margin-bottom:30px;">
         <form method="post" action="/admin/recaptcha/toggle" style="display:inline-block;">
-            <button type="submit" class="btn" style="width:auto; background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);">
+            <button type="submit" class="btn" style="width:auto; background: linear-gradient(135deg, var(--brand-600) 0%, var(--brand-800) 100%);">
                 {{ 'Disable reCAPTCHA' if recaptcha_enabled else 'Enable reCAPTCHA' }}
             </button>
         </form>
@@ -79,13 +79,13 @@
                 <input class="form-control" type="number" name="max_bookings_per_day" min="1" value="{{ max_bookings_per_day }}" required>
             </div>
         </div>
-        <button type="submit" class="btn" style="width:100%;">Update Availability</button>
+    <button type="submit" class="btn" style="width:100%; background: linear-gradient(135deg, var(--brand-600) 0%, var(--brand-800) 100%);">Update Availability</button>
     </form>
 
     <hr style="margin:30px 0;">
     <h2 style="font-size:1.3rem; font-weight:600; color:#333; margin-bottom:15px;">Email Settings</h2>
     {% set email_enabled = get_setting('email_enabled','0') %}
-    {% set from_email = get_setting('from_email') %}
+    {% set from_email = get_setting('from_email','FixIt NZ <no-reply@example.com>') %}
     {% set admin_email = get_setting('admin_email','') %}
     <form method="post" action="/admin/email/update">
         <div class="form-check" style="margin-bottom:15px;">
@@ -101,7 +101,10 @@
             <label class="form-label">Admin email (notifications)</label>
             <input class="form-control" type="email" name="admin_email" value="{{ admin_email }}" placeholder="owner@fixitnz.me">
         </div>
-        <button type="submit" class="btn" style="width:100%;">Update Email Settings</button>
+    <button type="submit" class="btn" style="width:100%; background: linear-gradient(135deg, var(--brand-600) 0%, var(--brand-800) 100%);">Update Email Settings</button>
+    </form>
+    <form method="post" action="/admin/email/test" style="margin-top:10px;">
+    <button type="submit" class="btn btn-success" style="width:100%; background: linear-gradient(135deg, var(--brand-600) 0%, var(--brand-800) 100%);">Send Test Email to Admin</button>
     </form>
 
     <div style="margin-top: 30px; text-align:center;">

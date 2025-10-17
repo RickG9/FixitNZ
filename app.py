@@ -46,6 +46,8 @@ def validate_admin_session():
         return False
     return True
 
+# relationional database, mysql intergration
+
 def init_db():
     """Initialize the database with the bookings table."""
     conn = sqlite3.connect(DATABASE)
@@ -582,7 +584,7 @@ def admin_decline_booking(booking_id):
         when = b[7]
         html = f"""
             <p>Hi {user_name},</p>
-            <p>Unfortunately, your booking request for <b>{when}</b> was declined.</p>
+            <p>Unfortunately, your booking request on <b>{when}</b> has been declined.</p>
             {f'<p><b>Reason:</b> {reason}</p>' if reason else ''}
             <p>Please <a href="{url_for('book_inspection', _external=True)}">submit a new request</a> or contact us to reschedule.</p>
             <p>– FixIt NZ</p>
@@ -611,6 +613,27 @@ def update_email_settings():
         flash('Email settings updated.', 'success')
     except Exception as e:
         flash(f'Error updating email settings: {e}', 'error')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/email/test', methods=['POST'])
+def admin_email_test():
+    if not validate_admin_session():
+        flash('Please log in first', 'error')
+        return redirect(url_for('admin_view'))
+    admin_email = get_setting('admin_email', '').strip()
+    if not admin_email:
+        flash('Set an Admin email first in Email Settings.', 'error')
+        return redirect(url_for('admin_dashboard'))
+    ok = send_email(
+        admin_email,
+        'FixIt NZ • Test email',
+        '<p>This is a test email from the admin dashboard.</p>',
+        'This is a test email from the admin dashboard.'
+    )
+    if ok:
+        flash('Test email sent to Admin email.', 'success')
+    else:
+        flash('Failed to send test email. Check RESEND_API_KEY, From address, and domain verification.', 'error')
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/admin/bookings/delete/<int:booking_id>', methods=['POST'])

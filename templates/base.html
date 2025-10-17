@@ -7,16 +7,30 @@
   <script src="https://www.google.com/recaptcha/enterprise.js?render=6LfrKpQrAAAAAMmi51xrVRwb0LBFDBw-eoPPDrLc"></script>
   <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='images/logo.ico') }}">
   <style>
-    :root { --font-sans: 'Helvetica Neue', Arial, sans-serif; --font-serif: Georgia, 'Times New Roman', serif; }
+    :root {
+      --font-sans: 'Helvetica Neue', Arial, sans-serif;
+      --font-serif: Georgia, 'Times New Roman', serif;
+      /* Brand greens */
+      --brand-100: #A7C957; /* light */
+      --brand-600: #6A994E; /* primary */
+      --brand-800: #386641; /* dark */
+      /* App palette derived from brand */
+      --color-bg: #f7faf2;          /* soft background wash */
+      --color-bg-2: #eff6e6;        /* subtle gradient stop */
+      --color-text: #223429;        /* deep green-gray for readability */
+      --color-border: #d6e6cc;      /* gentle greenish-gray borders */
+      --color-primary: var(--brand-600);
+      --color-primary-2: var(--brand-800);
+      --color-focus: rgba(106, 153, 78, 0.2); /* subtle focus ring */
+      --color-shadow: rgba(56, 102, 65, 0.15); /* gentle green shadow */
+    }
     html, body {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: #212529;
+      background: linear-gradient(180deg, var(--color-bg) 0%, var(--color-bg-2) 100%);
+      color: var(--color-text);
       min-height: 100vh;
       margin: 0;
       padding: 0;
-      /* Prevent overscroll white background */
       overscroll-behavior: none;
-      /* Ensure gradient covers full viewport */
       background-attachment: fixed;
       font-family: var(--font-sans);
     }
@@ -24,7 +38,7 @@
     .terms-serif * { font-family: var(--font-serif) !important; }
     .container {
       background: transparent;
-      color: #212529;
+      color: var(--color-text);
     }
     #map { height: 180px; }
     
@@ -32,7 +46,7 @@
     .form-control, select {
       background-color: white;
       color: #333;
-      border: 2px solid #e1e5e9;
+      border: 2px solid var(--color-border);
       border-radius: 12px;
       padding: 15px 20px;
       transition: all 0.3s ease;
@@ -41,13 +55,13 @@
     .form-control:focus, select:focus {
       background-color: white;
       color: #333;
-      border-color: #667eea;
-      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px var(--color-focus);
       outline: none;
     }
     
     .btn {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-2) 100%);
       border: none;
       color: white;
       padding: 12px 30px;
@@ -58,8 +72,8 @@
     
     .btn:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-      background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+      box-shadow: 0 8px 25px rgba(56, 102, 65, 0.3);
+      background: linear-gradient(135deg, var(--brand-100) 0%, var(--brand-800) 100%);
       color: white;
     }
     
@@ -68,7 +82,7 @@
       background: rgba(255, 255, 255, 0.95);
       border-radius: 20px;
       padding: 40px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 20px 40px var(--color-shadow);
       backdrop-filter: blur(10px);
       max-width: 500px;
       margin: 50px auto;

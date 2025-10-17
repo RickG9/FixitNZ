@@ -5,7 +5,7 @@
   <p style="color:#555; font-size:0.9rem; margin-top:-5px;">Sensitive data. Please keep these safe from malicious actors online.</p>
   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
     <div></div>
-    <button onclick="printBookingsTable()" class="btn btn-success" style="padding:8px 18px; font-size:0.85rem; background:linear-gradient(135deg,#10b981,#059669);">Print List</button>
+  <button onclick="printBookingsTable()" class="btn btn-success" style="padding:8px 18px; font-size:0.85rem; background:linear-gradient(135deg, var(--brand-600), var(--brand-800));">Print List</button>
   </div>
   <div style="overflow-x:auto;">
     <table id="bookings-table" style="width:100%; border-collapse:collapse; font-size:0.82rem;">
@@ -44,7 +44,7 @@
             {% if (b[9] or 'pending') == 'pending' %}
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
               <form method="post" action="{{ url_for('admin_approve_booking', booking_id=b[0]) }}">
-                <button type="submit" class="btn btn-success" style="padding:6px 10px;">Approve</button>
+                <button type="submit" class="btn btn-success" style="padding:6px 10px; background:linear-gradient(135deg, var(--brand-600), var(--brand-800));">Approve</button>
               </form>
               <form method="post" action="{{ url_for('admin_decline_booking', booking_id=b[0]) }}" style="display:flex; gap:6px; align-items:center;">
                 <input type="text" name="reason" placeholder="Reason (optional)" style="padding:6px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:0.8rem;">
