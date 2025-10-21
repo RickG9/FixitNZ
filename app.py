@@ -9,6 +9,7 @@ import bcrypt
 import requests
 from datetime import timedelta
 from typing import Optional
+import base64
 
 app = Flask(__name__)
 app.secret_key = 'hAcgqVoa+evvQeX3g/RiciTJk0m1fzlAuZysqpwbmU+7mmD8gc9JLtQP2hLBqwCZ'  # TODO: move to environment variable
@@ -754,6 +755,75 @@ def update_availability():
     except Exception as e:
         flash(f'Error updating settings: {e}', 'error')
     return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/background/upload', methods=['POST'])
+def admin_background_upload():
+    """Upload and set a site-wide background image stored in settings as base64."""
+    if not validate_admin_session():
+        flash('Please log in first', 'error')
+        return redirect(url_for('admin_view'))
+    file = request.files.get('background_image')
+    opacity_str = request.form.get('opacity', '0.35')
+    try:
+        opacity = max(0.0, min(1.0, float(opacity_str)))
+    except ValueError:
+        opacity = 0.35
+    if not file or file.filename == '':
+        flash('Please choose an image file to upload.', 'error')
+        return redirect(url_for('admin_dashboard'))
+    allowed_types = {
+        'image/jpeg': 'jpg',
+        'image/png': 'png',
+        'image/webp': 'webp'
+    }
+    mimetype = file.mimetype or ''
+    if mimetype not in allowed_types:
+        flash('Unsupported file type. Please upload a JPG, PNG, or WEBP image.', 'error')
+        return redirect(url_for('admin_dashboard'))
+    try:
+        data = file.read()
+        if not data:
+            raise ValueError('Empty file')
+        if len(data) > 3 * 1024 * 1024:
+            flash('Image too large (max 3MB). Please choose a smaller image.', 'error')
+            return redirect(url_for('admin_dashboard'))
+        b64 = base64.b64encode(data).decode('ascii')
+        set_setting('background_image_b64', b64)
+        set_setting('background_image_mime', mimetype)
+        set_setting('background_image_opacity', f"{opacity:.2f}")
+        flash('Background image updated successfully.', 'success')
+    except Exception as e:
+        flash(f'Failed to upload background: {e}', 'error')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/admin/background/clear', methods=['POST'])
+def admin_background_clear():
+    if not validate_admin_session():
+        flash('Please log in first', 'error')
+        return redirect(url_for('admin_view'))
+    try:
+        set_setting('background_image_b64', '')
+        set_setting('background_image_mime', '')
+        flash('Background image cleared.', 'success')
+    except Exception as e:
+        flash(f'Failed to clear background: {e}', 'error')
+    return redirect(url_for('admin_dashboard'))
+
+@app.route('/background-image')
+def background_image():
+    """Serve the configured background image as a binary response."""
+    b64 = get_setting('background_image_b64', '') or ''
+    if not b64:
+        return ('', 204)
+    mime = get_setting('background_image_mime', 'image/jpeg') or 'image/jpeg'
+    try:
+        data = base64.b64decode(b64)
+    except Exception:
+        return ('', 204)
+    resp = make_response(data)
+    resp.headers['Content-Type'] = mime
+    resp.headers['Cache-Control'] = 'no-store'
+    return resp
 
 # Initialize database when module is imported (for production)
 init_db()

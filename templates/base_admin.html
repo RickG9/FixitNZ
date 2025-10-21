@@ -139,9 +139,29 @@
       color: #059669;
       border-left: 4px solid #059669;
     }
+
+    /* Site-wide background overlay image */
+    .site-bg-img {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      z-index: 0;
+      pointer-events: none;
+    }
+    body { position: relative; }
+    .container { position: relative; z-index: 1; }
   </style>
 </head>
 <body>
+  {% set bg_b64 = get_setting('background_image_b64','') %}
+  {% if bg_b64 %}
+    {% set bg_mime = get_setting('background_image_mime','image/jpeg') %}
+    {% set bg_opacity = get_setting('background_image_opacity','0.35') %}
+    <img class="site-bg-img" src="data:{{ bg_mime }};base64,{{ bg_b64 }}" alt="" style="opacity: {{ bg_opacity }};" />
+  {% endif %}
   <div class="container mt-5">
     {% block content %}{% endblock %}
   </div>

@@ -41,6 +41,38 @@
     </div>
 
     <hr style="margin:30px 0;">
+    <h2 style="font-size:1.3rem; font-weight:600; color:#333; margin-bottom:15px;">Site Background</h2>
+    {% set bg_b64 = get_setting('background_image_b64','') %}
+    <div class="mb-3" style="background: rgba(255,255,255,0.6); padding: 16px; border-radius: 12px;">
+        {% if bg_b64 %}
+            <div style="display:flex; align-items:center; gap:15px; justify-content: space-between; flex-wrap: wrap;">
+                <div style="flex:1; min-width: 240px;">
+                    <div style="font-weight:600; color:#333; margin-bottom:8px;">Current background:</div>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <img src="data:{{ get_setting('background_image_mime','image/jpeg') }};base64,{{ bg_b64 }}" alt="preview" style="width:120px; height:60px; border-radius:8px; object-fit:cover; object-position:center; border:1px solid rgba(0,0,0,0.08);" />
+                        <div style="font-size:0.9rem; color:#555;">Opacity: {{ get_setting('background_image_opacity','0.35') }}</div>
+                    </div>
+                </div>
+                <form method="post" action="/admin/background/clear" style="margin:0;">
+                    <button type="submit" class="btn btn-danger">Clear Background</button>
+                </form>
+            </div>
+        {% else %}
+            <div style="color:#555;">No background image set.</div>
+        {% endif %}
+    </div>
+    <form method="post" action="/admin/background/upload" enctype="multipart/form-data" style="margin-bottom:20px;">
+        <label class="form-label">Upload Background Image (JPG/PNG/WEBP, max 3MB)</label>
+        <input class="form-control" type="file" name="background_image" accept="image/jpeg,image/png,image/webp" required>
+        <div class="mb-3" style="margin-top:10px;">
+            <label class="form-label">Background Opacity</label>
+            <input class="form-control" type="number" name="opacity" min="0" max="1" step="0.05" value="{{ get_setting('background_image_opacity','0.35') }}" style="max-width:160px;">
+            <div style="font-size:0.85rem; color:#555;">Lower values are more subtle (recommended 0.25–0.45).</div>
+        </div>
+        <button type="submit" class="btn" style="width:100%; background: linear-gradient(135deg, var(--brand-600) 0%, var(--brand-800) 100%);">Save Background</button>
+    </form>
+
+    <hr style="margin:30px 0;">
     <h2 style="font-size:1.3rem; font-weight:600; color:#333; margin-bottom:15px;">Availability Settings</h2>
     {% set availability_days = get_setting('availability_days','0,1,2,3,4') %}
     {% set start_hour = get_setting('availability_start_hour','8') %}
