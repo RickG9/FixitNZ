@@ -105,13 +105,57 @@
   </style>
 </head>
 <body>
-  {% set has_bg = get_setting('background_image_b64','') %}
-  {% if has_bg %}
-    {% set bg_opacity = get_setting('background_image_opacity','0.35') %}
-    <img class="site-bg-img" src="{{ url_for('background_image') }}" alt="" style="opacity: {{ bg_opacity }};" />
-  {% endif %}
+  {% set bg_opacity = get_setting('background_image_opacity','0.35') %}
+  <img class="site-bg-img" src="{{ url_for('background_image') }}" alt="" style="opacity: {{ bg_opacity }}; display:none;" onload="this.style.display='block'" />
   <div class="container mt-5">
     {% block content %}{% endblock %}
   </div>
+
+  <!-- Hidden Google Translate element -->
+  <div id="google_translate_element" style="display:none;"></div>
+
+  <!-- Site-wide translate toggle -->
+  <div id="translate-toggle" style="position: fixed; right: 16px; bottom: 16px; z-index: 9999; display:flex; gap:8px;">
+    <button type="button" onclick="translateTo('mi')" style="background:#065f46; color:#fff; border:none; padding:10px 14px; border-radius:999px; font-weight:600; box-shadow:0 6px 16px rgba(0,0,0,0.15); cursor:pointer;">Te reo Māori</button>
+    <button type="button" onclick="translateTo('en')" style="background:#374151; color:#fff; border:none; padding:10px 14px; border-radius:999px; font-weight:600; box-shadow:0 6px 16px rgba(0,0,0,0.15); cursor:pointer;">English</button>
+  </div>
+
+  <script>
+  function googleTranslateElementInit() {
+    if (window.google && window.google.translate) {
+      new google.translate.TranslateElement({
+        pageLanguage: 'en',
+        includedLanguages: 'en,mi',
+        autoDisplay: false
+      }, 'google_translate_element');
+    }
+  }
+  function getCookie(name) {
+    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    return match ? decodeURIComponent(match[2]) : null;
+  }
+  function setCookie(name, value) {
+    const expires = new Date(Date.now() + 365*24*60*60*1000).toUTCString();
+    document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/';
+    // also set domain cookie variant to help on some hosts
+    try {
+      const host = location.hostname.replace(/^www\./, '');
+      document.cookie = name + '=' + encodeURIComponent(value) + '; expires=' + expires + '; path=/; domain=' + host;
+    } catch (e) {}
+  }
+  function translateTo(lang) {
+    const pair = '/en/' + lang;
+    setCookie('googtrans', pair);
+    // If Google widget is loaded, trigger change programmatically; else reload.
+    var combo = document.querySelector('.goog-te-combo');
+    if (combo) {
+      combo.value = lang;
+      combo.dispatchEvent(new Event('change'));
+    } else {
+      location.reload();
+    }
+  }
+  </script>
+  <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 </body>
 </html>

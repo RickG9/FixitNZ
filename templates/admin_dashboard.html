@@ -5,6 +5,12 @@
         <h1 class="admin-title">Admin Dashboard</h1>
         <p style="color: #666;">Welcome to the repair booking management system</p>
     </div>
+    {% if total_carbon_saved_kg is defined %}
+    <div style="background:#ecfeff; border:1px solid #bae6fd; color:#0c4a6e; padding:16px; border-radius:12px; margin-bottom:18px;">
+        <strong>Total carbon saved to date:</strong>
+        <span style="font-weight:700;">{{ '%.2f' % total_carbon_saved_kg }} kg CO₂e</span>
+    </div>
+    {% endif %}
     
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}

@@ -85,10 +85,10 @@ def init_db():
         INSERT OR IGNORE INTO settings (key, value) VALUES ('email_enabled', '0')
     ''')
     cursor.execute('''
-        INSERT OR IGNORE INTO settings (key, value) VALUES ('from_email', '')
+        INSERT OR IGNORE INTO settings (key, value) VALUES ('from_email', 'FixIt NZ <no-reply@fixitnz.me>')
     ''')
     cursor.execute('''
-        INSERT OR IGNORE INTO settings (key, value) VALUES ('admin_email', '')
+        INSERT OR IGNORE INTO settings (key, value) VALUES ('admin_email', 'rick.nu.mc@gmail.com')
     ''')
     # Migration: ensure created_at column exists (older deployments may miss it)
     cursor.execute("PRAGMA table_info(bookings)")
@@ -117,6 +117,14 @@ def init_db():
             cursor.execute("ALTER TABLE bookings ADD COLUMN decided_at TEXT")
         except sqlite3.OperationalError:
             pass
+    # Carbon: estimated CO2e saved by repairing instead of replacing (kg)
+    cursor.execute("PRAGMA table_info(bookings)")
+    cols = [r[1] for r in cursor.fetchall()]
+    if 'carbon_saved_kg' not in cols:
+        try:
+            cursor.execute("ALTER TABLE bookings ADD COLUMN carbon_saved_kg REAL")
+        except sqlite3.OperationalError:
+            pass
 
     # Default availability / scheduling settings (stored in general settings table)
     defaults = {
@@ -128,6 +136,20 @@ def init_db():
     }
     for k, v in defaults.items():
         cursor.execute('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)', (k, v))
+
+    # Ensure email defaults are set if existing values are empty strings
+    cursor.execute('SELECT value FROM settings WHERE key = ? LIMIT 1', ('from_email',))
+    row = cursor.fetchone()
+    if not row or (row[0] or '').strip() == '':
+        cursor.execute('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', (
+            'from_email', 'FixIt NZ <no-reply@fixitnz.me>'
+        ))
+    cursor.execute('SELECT value FROM settings WHERE key = ? LIMIT 1', ('admin_email',))
+    row = cursor.fetchone()
+    if not row or (row[0] or '').strip() == '':
+        cursor.execute('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', (
+            'admin_email', 'rick.nu.mc@gmail.com'
+        ))
 
     conn.commit()
     conn.close()
@@ -156,6 +178,60 @@ def recaptcha_is_enabled():
 app.jinja_env.globals['get_setting'] = get_setting
 
 # ---------------- Email Helper ---------------- #
+DEVICE_LABELS = {
+    'iphone': 'iPhone',
+    'ipad': 'iPad',
+    'mcb': 'MacBook',
+    'win': 'Windows Computer',
+    'other': 'General Diagnostic'
+}
+
+REPAIR_LABELS = {
+    'screen': 'Screen Replacement',
+    'battery': 'Battery Replacement',
+    'chargingport': 'Charging Port',
+    'camera': 'Camera Issues',
+    'water': 'Water Damage',
+    'software': 'Software Issues',
+    'otherrepair': 'Other Hardware Issue',
+    '': 'Not specified',
+    None: 'Not specified'
+}
+
+def device_label(code: Optional[str]) -> str:
+    return DEVICE_LABELS.get((code or '').lower(), code or '-')
+
+def repair_label(code: Optional[str]) -> str:
+    return REPAIR_LABELS.get((code or '').lower(), code or '-')
+
+# Register as Jinja filters for easy use in templates
+app.jinja_env.filters['device_label'] = device_label
+app.jinja_env.filters['repair_label'] = repair_label
+def estimate_carbon_saved(device: Optional[str], repair: Optional[str]) -> float:
+    """Estimate kg CO2e saved by repairing instead of replacing.
+    Baselines are conservative typical embodied carbon estimates; repair emissions are small.
+    """
+    device = (device or '').lower()
+    repair = (repair or '').lower()
+    baseline = {
+        'iphone': 75.0,   # smartphone
+        'ipad': 85.0,     # tablet
+        'mcb': 200.0,     # laptop
+        'win': 250.0,     # desktop/pc
+        'other': 50.0
+    }.get(device, 50.0)
+    repair_emissions = {
+        'screen': 5.0,
+        'battery': 3.0,
+        'chargingport': 2.0,
+        'camera': 2.0,
+        'water': 10.0,
+        'software': 0.5,
+        'otherrepair': 2.0,
+        '': 2.0
+    }.get(repair, 2.0)
+    saved = max(0.0, baseline - repair_emissions)
+    return round(saved, 2)
 def send_email(to_email: str, subject: str, html: str, text: Optional[str] = None) -> bool:
     """Send an email via Resend API. Requires RESEND_API_KEY env var and email_enabled setting.
     Returns True on success, False otherwise.
@@ -169,7 +245,7 @@ def send_email(to_email: str, subject: str, html: str, text: Optional[str] = Non
     if not api_key:
         print('[email] RESEND_API_KEY missing; email not sent')
         return False
-    from_email = get_setting('from_email', 'FixIt NZ <no-reply@example.com>')
+    from_email = get_setting('from_email', 'FixIt NZ <no-reply@fixitnz.me>')
     try:
         resp = requests.post(
             'https://api.resend.com/emails',
@@ -195,29 +271,32 @@ def send_email(to_email: str, subject: str, html: str, text: Optional[str] = Non
         return False
 
 def save_booking(booking_data):
-    """Save booking data to SQLite database."""
+    """Save booking data to SQLite database. Returns inserted booking id."""
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
     cursor.execute('''
-        INSERT INTO bookings (name, email, phone, device, repair, issue, booking_time, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO bookings (name, email, phone, device, repair, issue, booking_time, created_at, carbon_saved_kg)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     ''', (
         booking_data['name'],
         booking_data['email'],
-        booking_data['phone'],
-        booking_data['device'],
-        booking_data['repair'],
-        booking_data['issue'],
-        booking_data['booking_time'],  # scheduled time
-        booking_data['created_at']     # time of submission
+        booking_data.get('phone'),
+        booking_data.get('device'),
+        booking_data.get('repair'),
+        booking_data.get('issue'),
+        booking_data.get('booking_time'),  # scheduled time
+        booking_data.get('created_at'),    # time of submission
+        booking_data.get('carbon_saved_kg', None)
     ))
+    booking_id = cursor.lastrowid
     conn.commit()
     conn.close()
+    return booking_id
 
 def get_booking_by_id(booking_id: int):
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
-    cursor.execute('SELECT id, name, email, phone, device, repair, issue, booking_time, created_at, status, decision_message, decided_at FROM bookings WHERE id = ?', (booking_id,))
+    cursor.execute('SELECT id, name, email, phone, device, repair, issue, booking_time, created_at, status, decision_message, decided_at, carbon_saved_kg FROM bookings WHERE id = ?', (booking_id,))
     row = cursor.fetchone()
     conn.close()
     return row
@@ -235,7 +314,7 @@ def get_all_bookings():
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()
     # Include id and created_at for transparency
-    cursor.execute('SELECT id, name, email, phone, device, repair, issue, booking_time, created_at, status, decision_message, decided_at FROM bookings ORDER BY datetime(booking_time) ASC')
+    cursor.execute('SELECT id, name, email, phone, device, repair, issue, booking_time, created_at, status, decision_message, decided_at, carbon_saved_kg FROM bookings ORDER BY datetime(booking_time) ASC')
     bookings = cursor.fetchall()
     conn.close()
     return bookings
@@ -425,6 +504,7 @@ def book_inspection():
             flash('You must accept the Terms and Conditions to proceed.', 'error')
             return render_template('booking_form.html', recaptcha_enabled=recaptcha_is_enabled(), site_key=RECAPTCHA_SITE_KEY if recaptcha_is_enabled() else None)
 
+        carbon_saved = estimate_carbon_saved(device, repair)
         booking_data = {
             'name': name,
             'email': email,
@@ -433,10 +513,15 @@ def book_inspection():
             'repair': repair,
             'issue': issue,
             'booking_time': booking_time,
-            'created_at': created_at
+            'created_at': created_at,
+            'carbon_saved_kg': carbon_saved
         }
         # Save booking details to the database
-        save_booking(booking_data)
+        booking_id = save_booking(booking_data)
+        try:
+            session['last_booking_id'] = booking_id
+        except Exception:
+            pass
         # Send emails (user + admin) if enabled
         try:
             # User receipt
@@ -445,8 +530,8 @@ def book_inspection():
                 <p>Hi {name},</p>
                 <p>Thanks for your booking request. Here are the details:</p>
                 <ul>
-                  <li><b>Device:</b> {device}</li>
-                  <li><b>Repair:</b> {repair or 'N/A'}</li>
+                                        <li><b>Device:</b> {device_label(device)}</li>
+                                        <li><b>Repair:</b> {repair_label(repair)}</li>
                   <li><b>Issue:</b> {issue or 'N/A'}</li>
                   <li><b>Requested time:</b> {booking_time}</li>
                 </ul>
@@ -465,8 +550,8 @@ def book_inspection():
                       <li><b>Name:</b> {name}</li>
                       <li><b>Email:</b> {email}</li>
                       <li><b>Phone:</b> {phone or '-'} </li>
-                      <li><b>Device:</b> {device}</li>
-                      <li><b>Repair:</b> {repair or 'N/A'}</li>
+                                                <li><b>Device:</b> {device_label(device)}</li>
+                                                <li><b>Repair:</b> {repair_label(repair)}</li>
                       <li><b>Issue:</b> {issue or 'N/A'}</li>
                       <li><b>Requested time:</b> {booking_time}</li>
                     </ul>
@@ -483,7 +568,19 @@ def book_inspection():
 
 @app.route('/success')
 def booking_success():
-    return render_template('booking_success.html')
+    last_id = session.get('last_booking_id')
+    carbon_saved = None
+    device = None
+    if last_id:
+        b = get_booking_by_id(last_id)
+        if b:
+            # indices: 0..12 with carbon at 12
+            device = b[4]
+            try:
+                carbon_saved = b[12]
+            except Exception:
+                carbon_saved = None
+    return render_template('booking_success.html', carbon_saved_kg=carbon_saved, device=device)
 
 @app.route('/admin', methods=['GET', 'POST'])
 def admin_view():
@@ -513,7 +610,8 @@ def admin_dashboard():
     if not validate_admin_session():
         flash('Please log in first', 'error')
         return redirect(url_for('admin_view'))
-    return render_template('admin_dashboard.html', recaptcha_enabled=recaptcha_is_enabled())
+    total_carbon = get_total_carbon_saved()
+    return render_template('admin_dashboard.html', recaptcha_enabled=recaptcha_is_enabled(), total_carbon_saved_kg=total_carbon)
 
 @app.route('/admin/recaptcha/toggle', methods=['POST'])
 def toggle_recaptcha():
@@ -725,6 +823,14 @@ def api_available_slots():
     slots = generate_available_slots_for_date(target_date)
     return jsonify({'date': date_str, 'slots': slots})
 
+def get_total_carbon_saved() -> float:
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    cursor.execute('SELECT COALESCE(SUM(carbon_saved_kg), 0) FROM bookings')
+    row = cursor.fetchone()
+    conn.close()
+    return float(row[0] or 0.0)
+
 @app.route('/admin/availability/update', methods=['POST'])
 def update_availability():
     if not validate_admin_session():
@@ -813,17 +919,33 @@ def admin_background_clear():
 def background_image():
     """Serve the configured background image as a binary response."""
     b64 = get_setting('background_image_b64', '') or ''
-    if not b64:
-        return ('', 204)
-    mime = get_setting('background_image_mime', 'image/jpeg') or 'image/jpeg'
+    if b64:
+        mime = get_setting('background_image_mime', 'image/jpeg') or 'image/jpeg'
+        try:
+            data = base64.b64decode(b64)
+            resp = make_response(data)
+            resp.headers['Content-Type'] = mime
+            resp.headers['Cache-Control'] = 'no-store'
+            return resp
+        except Exception:
+            pass
+    # Fallback to a default static image if present
     try:
-        data = base64.b64decode(b64)
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        # Check repo root first
+        default_root = os.path.join(base_dir, 'Mt Tongariro.jpeg')
+        default_static = os.path.join(base_dir, 'static', 'Mt Tongariro.jpeg')
+        for default_path in (default_root, default_static):
+            if os.path.exists(default_path):
+                with open(default_path, 'rb') as f:
+                    data = f.read()
+                resp = make_response(data)
+                resp.headers['Content-Type'] = 'image/jpeg'
+                resp.headers['Cache-Control'] = 'no-store'
+                return resp
     except Exception:
-        return ('', 204)
-    resp = make_response(data)
-    resp.headers['Content-Type'] = mime
-    resp.headers['Cache-Control'] = 'no-store'
-    return resp
+        pass
+    return ('', 204)
 
 # Initialize database when module is imported (for production)
 init_db()

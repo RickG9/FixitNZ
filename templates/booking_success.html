@@ -11,6 +11,20 @@
             <strong>What happens next?</strong><br>
             Our technicians will review your request and reach out to schedule your repair appointment.
         </div>
+
+        {% if carbon_saved_kg is not none %}
+        <div style="background:#f0fdf4; border:1px solid #bbf7d0; color:#14532d; padding:20px; border-radius:12px; margin-bottom:24px; text-align:left;">
+            <div style="font-weight:700; font-size:1.2rem; margin-bottom:8px;">Kia ora – your repair helps the planet</div>
+            <div style="font-size:1rem;">
+                By repairing your <strong>{{ (device | device_label) if device else 'device' }}</strong>, you've avoided an estimated
+                <strong>{{ '%.2f' % carbon_saved_kg }} kg CO₂e</strong> compared with buying a new one.
+            </div>
+            <div style="font-size:0.9rem; color:#065f46; margin-top:8px;">
+                Estimate based on typical embodied carbon for electronics minus small repair emissions.
+            </div>
+        </div>
+        {% endif %}
+
         <a href="/" class="btn" style="display: inline-block; text-decoration: none; background: linear-gradient(135deg, var(--brand-600) 0%, var(--brand-800) 100%);">
             Book Another Repair
         </a>
